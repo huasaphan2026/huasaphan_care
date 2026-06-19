@@ -5,7 +5,7 @@ compatibility_date = "2026-06-19"
 [[d1_databases]]
 binding = "DB"
 database_name = "hua_saphan_care_db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "849c4325-b472-4ead-a96c-85a795d9e970"
 
 [[r2_buckets]]
 binding = "BUCKET"
