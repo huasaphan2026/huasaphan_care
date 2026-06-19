@@ -1,0 +1,1 @@
+-- Hua Saphan Care D1 schema will be added in the database setup phase.

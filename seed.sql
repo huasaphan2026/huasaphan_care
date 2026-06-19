@@ -1,0 +1,1 @@
+-- Hua Saphan Care seed data will be added in the database setup phase.

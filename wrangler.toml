@@ -1,0 +1,12 @@
+name = "hua-saphan-care"
+pages_build_output_dir = "public"
+compatibility_date = "2026-06-19"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hua_saphan_care_db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "hua-saphan-care-files"
