@@ -1,0 +1,9 @@
+# Wrangler local files and local D1 database
+.wrangler/
+
+# Node.js installed packages
+node_modules/
+
+# Local environment and secret files
+.env
+.dev.vars
