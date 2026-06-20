@@ -1,4 +1,5 @@
 const TRACKING_CODE_PATTERN = /^HSC-\d{4}-\d{4,}$/;
+const DEFAULT_PUBLIC_LOCATION = "พื้นที่บ้านหัวสะพาน";
 
 function jsonResponse(body, status = 200, extraHeaders = {}) {
   return Response.json(body, {
@@ -15,8 +16,12 @@ function normalizeTrackingCode(value) {
 }
 
 function toPublicLocation(report) {
-  const source = report.public_location_label || report.location_text || "";
+  const source = report.public_location_label || "";
   const compact = String(source).replace(/\s+/g, " ").trim();
+
+  if (!compact) {
+    return DEFAULT_PUBLIC_LOCATION;
+  }
 
   if (compact.length <= 120) {
     return compact;
@@ -64,7 +69,6 @@ export async function onRequest({ request, env }) {
         r.title,
         r.status,
         r.priority,
-        r.location_text,
         r.public_location_label,
         r.created_at,
         r.updated_at,
