@@ -79,6 +79,36 @@ async function submitLogin({ username, password }) {
   return result;
 }
 
+function getSafeReturnPath() {
+  const fallbackPath = "/admin/dashboard.html";
+  const params = new URLSearchParams(window.location.search);
+  const returnPath = params.get("return") || "";
+  let returnUrl;
+
+  if (!returnPath || returnPath.includes("\\")) {
+    return fallbackPath;
+  }
+
+  try {
+    returnUrl = new URL(returnPath, window.location.origin);
+  } catch {
+    return fallbackPath;
+  }
+
+  if (
+    returnUrl.origin !== window.location.origin ||
+    returnUrl.username ||
+    returnUrl.password ||
+    !returnUrl.pathname.startsWith("/admin/") ||
+    returnUrl.pathname === "/admin/login" ||
+    returnUrl.pathname === "/admin/login.html"
+  ) {
+    return fallbackPath;
+  }
+
+  return returnUrl.pathname + returnUrl.search;
+}
+
 function initAdminLogin() {
   const form = document.querySelector("#admin-login-form");
 
@@ -125,7 +155,7 @@ function initAdminLogin() {
         password: formData.password,
       });
 
-      window.location.assign("/admin/dashboard.html");
+      window.location.assign(getSafeReturnPath());
     } catch {
       setLoginStatus(
         statusElement,
