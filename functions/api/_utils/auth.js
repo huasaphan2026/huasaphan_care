@@ -3,8 +3,12 @@ const PASSWORD_HASH_ITERATIONS = 210000;
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_HASH_BITS = 256;
 const SESSION_TOKEN_BYTES = 32;
+export const SESSION_COOKIE_NAME = "hsc_session";
+export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const SESSION_SECRET_MIN_LENGTH = 32;
 
 const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 
 function bytesToBase64Url(bytes) {
   let binary = "";
@@ -33,6 +37,36 @@ function randomBytes(length) {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
   return bytes;
+}
+
+function getSessionSecret(env) {
+  const secret = String(env.SESSION_SECRET || "");
+
+  if (secret.length < SESSION_SECRET_MIN_LENGTH) {
+    return "";
+  }
+
+  return secret;
+}
+
+async function signSessionPayload(payloadText, secret) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    textEncoder.encode(payloadText)
+  );
+
+  return new Uint8Array(signature);
 }
 
 async function derivePasswordHash(password, salt, iterations) {
@@ -139,4 +173,100 @@ export async function verifyPassword(password, storedHash) {
 
 export function createSessionToken() {
   return bytesToBase64Url(randomBytes(SESSION_TOKEN_BYTES));
+}
+
+export function getCookie(request, name) {
+  const cookieHeader = request.headers.get("Cookie") || "";
+  const cookies = cookieHeader.split(";");
+
+  for (const cookie of cookies) {
+    const [rawName, ...rawValue] = cookie.trim().split("=");
+
+    if (rawName === name) {
+      return rawValue.join("=");
+    }
+  }
+
+  return "";
+}
+
+export async function createSignedSession(user, env) {
+  const secret = getSessionSecret(env);
+
+  if (!secret) {
+    throw new Error("SESSION_SECRET is not configured");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    uid: user.id,
+    sid: createSessionToken(),
+    iat: now,
+    exp: now + SESSION_MAX_AGE_SECONDS,
+  };
+  const payloadText = bytesToBase64Url(textEncoder.encode(JSON.stringify(payload)));
+  const signature = await signSessionPayload(payloadText, secret);
+
+  return `${payloadText}.${bytesToBase64Url(signature)}`;
+}
+
+export async function verifySessionToken(token, env) {
+  const secret = getSessionSecret(env);
+
+  if (!secret) {
+    return null;
+  }
+
+  const parts = String(token || "").split(".");
+
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return null;
+  }
+
+  try {
+    const [payloadText, signatureText] = parts;
+    const expectedSignature = await signSessionPayload(payloadText, secret);
+    const actualSignature = base64UrlToBytes(signatureText);
+
+    if (!constantTimeEqual(expectedSignature, actualSignature)) {
+      return null;
+    }
+
+    const payload = JSON.parse(textDecoder.decode(base64UrlToBytes(payloadText)));
+    const now = Math.floor(Date.now() / 1000);
+
+    if (!Number.isInteger(payload.uid) || !Number.isInteger(payload.exp)) {
+      return null;
+    }
+
+    if (payload.exp <= now) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+export function sessionCookie(token) {
+  return [
+    `${SESSION_COOKIE_NAME}=${token}`,
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+    "Path=/",
+    `Max-Age=${SESSION_MAX_AGE_SECONDS}`,
+  ].join("; ");
+}
+
+export function clearSessionCookie() {
+  return [
+    `${SESSION_COOKIE_NAME}=`,
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+    "Path=/",
+    "Max-Age=0",
+  ].join("; ");
 }

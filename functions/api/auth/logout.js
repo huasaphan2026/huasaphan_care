@@ -1,17 +1,5 @@
+import { clearSessionCookie } from "../_utils/auth.js";
 import { jsonError, jsonOk } from "../_utils/response.js";
-
-const SESSION_COOKIE_NAME = "hsc_session";
-
-function clearSessionCookie() {
-  return [
-    `${SESSION_COOKIE_NAME}=`,
-    "HttpOnly",
-    "Secure",
-    "SameSite=Lax",
-    "Path=/",
-    "Max-Age=0",
-  ].join("; ");
-}
 
 function methodNotAllowed() {
   const response = jsonError("METHOD_NOT_ALLOWED", "Method not allowed", 405);
