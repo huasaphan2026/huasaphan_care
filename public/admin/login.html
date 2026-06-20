@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>เข้าสู่ระบบผู้ดูแล | Hua Saphan Care</title>
+    <meta
+      name="description"
+      content="เข้าสู่ระบบผู้ดูแล Hua Saphan Care"
+    >
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <script src="../js/admin-login.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="กลับหน้าแรก Hua Saphan Care">
+        <span class="brand-mark" aria-hidden="true">HSC</span>
+        <span>Hua Saphan Care</span>
+      </a>
+    </header>
+
+    <main>
+      <section class="page-section" aria-labelledby="login-title">
+        <div class="page-heading">
+          <a class="back-link" href="/">กลับหน้าแรก</a>
+          <p class="eyebrow">สำหรับผู้ดูแลระบบ</p>
+          <h1 id="login-title">เข้าสู่ระบบ</h1>
+          <p class="page-copy">
+            ใช้บัญชีผู้ดูแลเพื่อจัดการเรื่องแจ้งซ่อมและติดตามงานของชุมชน
+          </p>
+        </div>
+
+        <form class="form-card" id="admin-login-form" novalidate>
+          <div
+            class="form-status"
+            id="login-status"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></div>
+
+          <div class="field-group">
+            <label for="username">ชื่อผู้ใช้</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              inputmode="text"
+              required
+            >
+            <p class="field-error" id="username-error"></p>
+          </div>
+
+          <div class="field-group">
+            <label for="password">รหัสผ่าน</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+            >
+            <p class="field-error" id="password-error"></p>
+          </div>
+
+          <button class="button button-primary form-submit" id="login-button" type="submit">
+            เข้าสู่ระบบ
+          </button>
+
+          <p class="field-help">
+            หากลืมรหัสผ่าน กรุณาติดต่อผู้ดูแลโครงการโดยตรง
+          </p>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

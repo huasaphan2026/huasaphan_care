@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>แจ้งเรื่องสำเร็จ | Hua Saphan Care</title>
+    <meta
+      name="description"
+      content="แสดงรหัสติดตามหลังแจ้งเรื่องปัญหาชุมชนหัวสะพานสำเร็จ"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <script src="js/app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="กลับหน้าแรก Hua Saphan Care">
+        <span class="brand-mark" aria-hidden="true">HSC</span>
+        <span>Hua Saphan Care</span>
+      </a>
+      <a class="emergency-link" href="tel:0629617942">โทรฉุกเฉิน</a>
+    </header>
+
+    <main>
+      <section class="page-section" aria-labelledby="success-title">
+        <div class="form-card">
+          <p class="eyebrow">รับเรื่องเรียบร้อยแล้ว</p>
+          <h1 id="success-title">แจ้งเรื่องสำเร็จ</h1>
+          <p class="page-copy">
+            กรุณาเก็บรหัสติดตามนี้ไว้ เพื่อใช้ตรวจสอบความคืบหน้าของเรื่องที่แจ้ง
+          </p>
+
+          <div class="emergency-card" aria-live="polite">
+            <span class="field-help">รหัสติดตาม</span>
+            <strong id="tracking-code" data-tracking-code>กำลังโหลดรหัส...</strong>
+          </div>
+
+          <div id="success-status" class="form-status" role="status" aria-live="polite" hidden></div>
+
+          <div class="emergency-card">
+            <strong>หากเป็นเหตุฉุกเฉิน กรุณาโทรโดยตรง</strong>
+            <p>
+              เว็บนี้ไม่ใช่ช่องทางแจ้งเหตุฉุกเฉินแทนการโทร หากต้องการความช่วยเหลือทันที
+              กรุณาโทร <a href="tel:0629617942">0629617942</a>
+            </p>
+          </div>
+
+          <div class="hero-actions">
+            <button id="copy-tracking-code" class="button button-primary" type="button" data-requires-code>
+              คัดลอกรหัส
+            </button>
+            <a id="track-link" class="button button-secondary" href="track.html" data-requires-code>
+              ไปหน้าติดตามสถานะ
+            </a>
+            <a class="button button-secondary" href="index.html">กลับหน้าแรก</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>แจ้งเรื่องใหม่ | Hua Saphan Care</title>
+    <meta
+      name="description"
+      content="แบบฟอร์มแจ้งปัญหาชุมชนหัวสะพาน"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <script src="js/image-compress.js" defer></script>
+    <script src="js/report-form.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="กลับหน้าแรก Hua Saphan Care">
+        <span class="brand-mark" aria-hidden="true">HSC</span>
+        <span>Hua Saphan Care</span>
+      </a>
+      <a class="emergency-link" href="tel:0629617942">โทรฉุกเฉิน</a>
+    </header>
+
+    <main>
+      <section class="page-section" aria-labelledby="report-title">
+        <div class="page-heading">
+          <a class="back-link" href="index.html">กลับหน้าแรก</a>
+          <p class="eyebrow">แจ้งปัญหาชุมชน</p>
+          <h1 id="report-title">แจ้งเรื่องใหม่</h1>
+          <p class="page-copy">
+            กรอกข้อมูลเท่าที่จำเป็น เพื่อให้ทีมงานตรวจสอบและติดตามแก้ไขได้เร็วขึ้น
+          </p>
+        </div>
+
+        <form id="report-form" class="form-card" novalidate>
+          <div id="form-status" class="form-status" role="status" aria-live="polite" hidden></div>
+
+          <div class="field-group">
+            <label for="category">หมวดปัญหา <span aria-hidden="true">*</span></label>
+            <select id="category" name="category_id" aria-describedby="category-help category-error" required disabled>
+              <option value="">กำลังโหลดหมวดปัญหา...</option>
+            </select>
+            <p id="category-help" class="field-help">เลือกหมวดที่ใกล้เคียงกับปัญหามากที่สุด</p>
+            <p id="category-error" class="field-error" data-error-for="category"></p>
+            <button id="retry-categories" class="text-button" type="button" hidden>
+              โหลดหมวดอีกครั้ง
+            </button>
+          </div>
+
+          <div class="field-group">
+            <label for="title">หัวข้อเรื่อง <span aria-hidden="true">*</span></label>
+            <input
+              id="title"
+              name="title"
+              type="text"
+              maxlength="120"
+              autocomplete="off"
+              placeholder="เช่น ไฟทางหน้าซอยดับ"
+              required
+            >
+            <p class="field-help">สรุปสั้น ๆ ว่าเกิดปัญหาอะไร</p>
+            <p class="field-error" data-error-for="title"></p>
+          </div>
+
+          <div class="field-group">
+            <label for="detail">รายละเอียด <span aria-hidden="true">*</span></label>
+            <textarea
+              id="detail"
+              name="detail"
+              rows="5"
+              maxlength="2000"
+              placeholder="เล่าว่าปัญหาเกิดขึ้นอย่างไร เกิดมานานแค่ไหน หรือมีผลกระทบอะไร"
+              required
+            ></textarea>
+            <p class="field-help">ไม่ต้องใส่ข้อมูลส่วนตัวในรายละเอียด</p>
+            <p class="field-error" data-error-for="detail"></p>
+          </div>
+
+          <div class="field-group">
+            <label for="location_text">จุดเกิดเหตุ / จุดสังเกต <span aria-hidden="true">*</span></label>
+            <textarea
+              id="location_text"
+              name="location_text"
+              rows="3"
+              maxlength="300"
+              placeholder="เช่น หน้าศาลาหมู่บ้าน ใกล้เสาไฟเลข..."
+              required
+            ></textarea>
+            <p class="field-help">บอกจุดสังเกตที่คนในพื้นที่หาเจอได้ง่าย</p>
+            <p class="field-error" data-error-for="location_text"></p>
+          </div>
+
+          <fieldset class="field-group">
+            <legend>พิกัดตำแหน่ง (ไม่บังคับ)</legend>
+            <div class="split-fields">
+              <label>
+                ละติจูด
+                <input id="location_lat" name="location_lat" type="number" step="any" inputmode="decimal" placeholder="เช่น 8.123456">
+              </label>
+              <label>
+                ลองจิจูด
+                <input id="location_lng" name="location_lng" type="number" step="any" inputmode="decimal" placeholder="เช่น 99.123456">
+              </label>
+            </div>
+            <p class="field-help">ถ้าไม่ทราบพิกัด สามารถเว้นว่างได้</p>
+            <p class="field-error" data-error-for="location"></p>
+          </fieldset>
+
+          <div class="privacy-box">
+            <label class="switch-row" for="anonymous">
+              <input id="anonymous" name="anonymous" type="checkbox" checked>
+              <span>
+                <strong>ไม่ประสงค์เปิดเผยชื่อ</strong>
+                <small>ชื่อและเบอร์โทรเป็นข้อมูลไม่บังคับ และไม่ควรแสดงต่อสาธารณะ</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="split-fields">
+            <div class="field-group">
+              <label for="reporter_name">ชื่อผู้แจ้ง (ไม่บังคับ)</label>
+              <input id="reporter_name" name="reporter_name" type="text" maxlength="120" autocomplete="name">
+              <p class="field-error" data-error-for="reporter_name"></p>
+            </div>
+
+            <div class="field-group">
+              <label for="reporter_phone">เบอร์โทร (ไม่บังคับ)</label>
+              <input id="reporter_phone" name="reporter_phone" type="tel" maxlength="20" autocomplete="tel" inputmode="tel">
+              <p class="field-error" data-error-for="reporter_phone"></p>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="images">แนบรูปภาพ (สูงสุด 3 ภาพ)</label>
+            <input id="images" name="images" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+            <p class="field-help warning-text">
+              กรุณาอย่าถ่ายติดใบหน้า เลขบ้าน ป้ายทะเบียน หรือข้อมูลส่วนตัวของผู้อื่น
+              ระบบจะย่อรูปให้กว้างไม่เกิน 1280px ก่อนเตรียมส่ง
+            </p>
+            <p class="field-error" data-error-for="images"></p>
+            <div id="image-preview" class="image-preview" aria-live="polite"></div>
+          </div>
+
+          <button id="submit-button" class="button button-primary form-submit" type="submit">
+            ส่งเรื่อง
+          </button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

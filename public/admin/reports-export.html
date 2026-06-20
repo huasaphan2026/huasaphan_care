@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ส่งออกรายงาน | Hua Saphan Care</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    .admin-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .export-filter {
+      display: grid;
+      gap: 14px;
+    }
+
+    .export-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .export-warning {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 14px;
+      border: 1px solid rgba(102, 80, 26, 0.18);
+      border-radius: 8px;
+      background: var(--color-yellow);
+      color: #66501A;
+      font-weight: 700;
+    }
+
+    .export-warning strong {
+      color: var(--color-text);
+    }
+
+    .export-note-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    @media (min-width: 720px) {
+      .export-filter {
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+        align-items: end;
+      }
+
+      .export-actions {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+  <script src="../js/admin-export.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html" aria-label="Hua Saphan Care Admin">
+      <span class="brand-mark">HSC</span>
+      <span>
+        <strong>Hua Saphan Care</strong>
+        <small>Admin Export</small>
+      </span>
+    </a>
+    <a class="button button-secondary" href="/admin/dashboard.html">แดชบอร์ด</a>
+  </header>
+
+  <main>
+    <section class="page-section">
+      <div class="page-heading">
+        <p class="eyebrow">ข้อมูลสำหรับติดตามงาน</p>
+        <h1>ส่งออกรายงาน</h1>
+        <p class="page-copy">ดาวน์โหลดไฟล์ CSV ตามช่วงวันที่ สถานะ และหมวดปัญหา โดยค่าเริ่มต้นไม่รวมข้อมูลส่วนตัวของผู้แจ้ง</p>
+
+        <div class="admin-toolbar">
+          <a class="button button-secondary" href="/admin/reports.html">กลับหน้ารายการเรื่อง</a>
+          <a class="button button-secondary" href="/admin/dashboard.html">กลับแดชบอร์ด</a>
+        </div>
+      </div>
+
+      <section class="export-warning" aria-label="คำเตือนเรื่องข้อมูลส่วนตัว">
+        <strong>คำเตือนเรื่องข้อมูลส่วนตัว</strong>
+        <ul class="export-note-list">
+          <li>ไฟล์นี้ไม่มีชื่อ เบอร์โทร พิกัดละเอียด หรือข้อมูลอ่อนไหวของผู้แจ้งโดยค่าเริ่มต้น</li>
+          <li>ควรใช้ไฟล์เพื่อสรุปผล ติดตามงาน และรายงานภาพรวมเท่านั้น</li>
+          <li>หากจำเป็นต้องส่งออกข้อมูลส่วนตัว ต้องทำระบบสิทธิ์และการอนุมัติแยกต่างหาก</li>
+        </ul>
+      </section>
+
+      <section class="form-card" aria-labelledby="export-heading">
+        <h2 id="export-heading">ตัวกรองไฟล์ CSV</h2>
+
+        <form class="export-filter" id="export-form">
+          <div class="field-group">
+            <label for="date-from">วันที่เริ่มต้น</label>
+            <input id="date-from" name="date_from" type="date">
+          </div>
+
+          <div class="field-group">
+            <label for="date-to">วันที่สิ้นสุด</label>
+            <input id="date-to" name="date_to" type="date">
+          </div>
+
+          <div class="field-group">
+            <label for="status-filter">สถานะ</label>
+            <select id="status-filter" name="status">
+              <option value="">ทุกสถานะ</option>
+              <option value="new">เรื่องใหม่</option>
+              <option value="accepted">รับเรื่องแล้ว</option>
+              <option value="checking">กำลังตรวจสอบ</option>
+              <option value="in_progress">กำลังดำเนินการ</option>
+              <option value="resolved">แก้ไขแล้ว</option>
+              <option value="closed">ปิดเรื่อง</option>
+              <option value="rejected">ไม่รับดำเนินการ</option>
+              <option value="waiting_info">รอข้อมูลเพิ่มเติม</option>
+              <option value="forwarded">ส่งต่อหน่วยงาน</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="category-filter">หมวดปัญหา</label>
+            <select id="category-filter" name="category_id">
+              <option value="">ทุกหมวด</option>
+            </select>
+          </div>
+
+          <div class="export-actions">
+            <button class="button button-primary" id="download-button" type="submit">ดาวน์โหลด CSV</button>
+            <button class="button button-secondary" id="clear-button" type="button">ล้างตัวกรอง</button>
+          </div>
+        </form>
+      </section>
+
+      <div class="form-status" id="export-status" role="status" aria-live="polite" hidden></div>
+    </section>
+  </main>
+</body>
+</html>

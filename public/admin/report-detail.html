@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายละเอียดเรื่อง | Hua Saphan Care</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    .admin-toolbar,
+    .chip-row,
+    .form-actions,
+    .attachment-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .admin-toolbar {
+      margin-top: 18px;
+    }
+
+    .detail-layout,
+    .actions-layout {
+      display: grid;
+      gap: 18px;
+    }
+
+    .summary-card {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid rgba(28, 140, 135, 0.12);
+      border-radius: var(--radius-card);
+      background: var(--color-card);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .summary-card h2,
+    .action-card h2 {
+      margin: 0;
+    }
+
+    .summary-copy {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    .action-card {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(31, 42, 42, 0.08);
+      border-radius: var(--radius-card);
+      background: var(--color-card);
+    }
+
+    .attachment-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .attachment-item {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--color-bg);
+    }
+
+    .attachment-item p {
+      margin: 0;
+      color: var(--color-muted);
+      font-weight: 700;
+    }
+
+    .attachment-public-option {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--color-bg);
+    }
+
+    .attachment-public-option input {
+      width: 22px;
+      height: 22px;
+      min-height: 22px;
+      margin-top: 2px;
+      accent-color: var(--color-primary);
+    }
+
+    .muted-text {
+      margin: 0;
+      color: var(--color-muted);
+      font-weight: 700;
+    }
+
+    @media (min-width: 860px) {
+      .detail-layout {
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+        align-items: start;
+      }
+
+      .actions-layout {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+  <script src="../js/admin-report-detail.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html" aria-label="Hua Saphan Care Admin">
+      <span class="brand-mark">HSC</span>
+      <span>
+        <strong>Hua Saphan Care</strong>
+        <small>Report Detail</small>
+      </span>
+    </a>
+    <a class="button button-secondary" href="/admin/reports.html">รายการเรื่อง</a>
+  </header>
+
+  <main>
+    <section class="page-section">
+      <div class="page-heading">
+        <p class="eyebrow">จัดการรายละเอียดเรื่อง</p>
+        <h1 id="report-title">รายละเอียดเรื่อง</h1>
+        <p class="tracking-code-text" id="tracking-code">กำลังโหลดรหัสติดตาม...</p>
+        <div class="chip-row" id="summary-chips" aria-live="polite"></div>
+        <div class="admin-toolbar">
+          <a class="button button-secondary" href="/admin/reports.html">กลับหน้ารายการ</a>
+        </div>
+      </div>
+
+      <div class="form-status" id="detail-status" role="status" aria-live="polite">กำลังโหลดข้อมูล...</div>
+
+      <div class="detail-layout">
+        <section class="summary-card" aria-labelledby="detail-heading">
+          <h2 id="detail-heading">ข้อมูลเรื่อง</h2>
+          <dl class="detail-list" id="report-detail-list"></dl>
+          <h3>รายละเอียด</h3>
+          <p class="summary-copy" id="report-detail-text">-</p>
+        </section>
+
+        <section class="summary-card" aria-labelledby="reporter-heading">
+          <h2 id="reporter-heading">ข้อมูลผู้แจ้ง</h2>
+          <dl class="detail-list" id="reporter-list"></dl>
+          <p class="muted-text" id="reporter-note"></p>
+        </section>
+      </div>
+
+      <div class="detail-layout">
+        <section class="summary-card" aria-labelledby="timeline-heading">
+          <h2 id="timeline-heading">Timeline</h2>
+          <div class="form-status" id="timeline-empty" hidden>ยังไม่มี timeline ในเรื่องนี้</div>
+          <ul class="timeline-list" id="timeline-list"></ul>
+        </section>
+
+        <section class="summary-card" aria-labelledby="attachments-heading">
+          <h2 id="attachments-heading">ไฟล์แนบ</h2>
+          <div class="form-status" id="attachments-empty" hidden>ยังไม่มีไฟล์แนบ</div>
+          <ul class="attachment-list" id="attachments-list"></ul>
+        </section>
+      </div>
+
+      <section class="summary-card" aria-labelledby="assignments-heading">
+        <h2 id="assignments-heading">การมอบหมายงาน</h2>
+        <div class="form-status" id="assignments-empty" hidden>ยังไม่มีการมอบหมายงาน</div>
+        <ul class="attachment-list" id="assignments-list"></ul>
+      </section>
+
+      <section class="actions-layout" aria-label="จัดการเรื่อง">
+        <form class="action-card" id="status-form">
+          <h2>เปลี่ยนสถานะ</h2>
+          <div class="field-group">
+            <label for="status-input">สถานะใหม่</label>
+            <select id="status-input" name="status" required>
+              <option value="new">เรื่องใหม่</option>
+              <option value="accepted">รับเรื่องแล้ว</option>
+              <option value="checking">กำลังตรวจสอบ</option>
+              <option value="in_progress">กำลังดำเนินการ</option>
+              <option value="forwarded">ส่งต่อหน่วยงาน</option>
+              <option value="waiting_info">รอข้อมูลเพิ่มเติม</option>
+              <option value="resolved">แก้ไขแล้ว</option>
+              <option value="closed">ปิดเรื่อง</option>
+              <option value="rejected">ไม่รับดำเนินการ</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="status-note">หมายเหตุ</label>
+            <textarea id="status-note" name="note" rows="4" maxlength="2000" placeholder="อธิบายการเปลี่ยนสถานะ"></textarea>
+          </div>
+          <label class="switch-row">
+            <input id="status-public" type="checkbox" checked>
+            <span>
+              <strong>แสดงใน timeline ฝั่งประชาชน</strong>
+              <small>ปิดไว้หากเป็นบันทึกภายใน</small>
+            </span>
+          </label>
+          <button class="button button-primary form-submit" type="submit">บันทึกสถานะ</button>
+        </form>
+
+        <form class="action-card" id="update-form">
+          <h2>เพิ่ม update</h2>
+          <div class="field-group">
+            <label for="update-status">สถานะที่เกี่ยวข้อง</label>
+            <select id="update-status" name="status" required>
+              <option value="new">เรื่องใหม่</option>
+              <option value="accepted">รับเรื่องแล้ว</option>
+              <option value="checking">กำลังตรวจสอบ</option>
+              <option value="in_progress">กำลังดำเนินการ</option>
+              <option value="forwarded">ส่งต่อหน่วยงาน</option>
+              <option value="waiting_info">รอข้อมูลเพิ่มเติม</option>
+              <option value="resolved">แก้ไขแล้ว</option>
+              <option value="closed">ปิดเรื่อง</option>
+              <option value="rejected">ไม่รับดำเนินการ</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="update-note">ข้อความ update</label>
+            <textarea id="update-note" name="update_note" rows="5" maxlength="2000" required placeholder="บันทึกความคืบหน้า"></textarea>
+          </div>
+          <label class="switch-row">
+            <input id="update-public" type="checkbox" checked>
+            <span>
+              <strong>เผยแพร่ update นี้</strong>
+              <small>ประชาชนจะเห็นข้อความนี้ในหน้าติดตามสถานะ</small>
+            </span>
+          </label>
+          <button class="button button-primary form-submit" type="submit">เพิ่ม update</button>
+        </form>
+
+        <form class="action-card" id="assignment-form">
+          <h2>มอบหมายงาน</h2>
+          <div class="field-group">
+            <label for="assignee-id">รหัสผู้รับผิดชอบ</label>
+            <input id="assignee-id" name="user_id" type="number" min="1" step="1" required placeholder="เช่น 3">
+            <p class="field-help">ระบุ user id ของ staff/admin ที่ active อยู่</p>
+          </div>
+          <div class="field-group">
+            <label for="assignment-due">กำหนดเสร็จ</label>
+            <input id="assignment-due" name="due_date" type="date">
+          </div>
+          <div class="field-group">
+            <label for="assignment-note">หมายเหตุ</label>
+            <textarea id="assignment-note" name="note" rows="4" maxlength="1000" placeholder="รายละเอียดการมอบหมาย"></textarea>
+          </div>
+          <button class="button button-primary form-submit" type="submit">มอบหมายงาน</button>
+        </form>
+
+        <form class="action-card" id="public-form">
+          <h2>ตั้งค่าการเผยแพร่</h2>
+          <label class="switch-row">
+            <input id="public-visible" type="checkbox">
+            <span>
+              <strong>เผยแพร่เป็นผลงานที่แก้ไขแล้ว</strong>
+              <small>ใช้เฉพาะเรื่องที่คัดกรองแล้วและไม่มีข้อมูลส่วนตัว</small>
+            </span>
+          </label>
+          <div class="field-group">
+            <label for="public-summary">สรุปสำหรับเผยแพร่</label>
+            <textarea id="public-summary" rows="4" maxlength="1000" placeholder="สรุปผลการแก้ไขแบบไม่เปิดเผยข้อมูลส่วนตัว"></textarea>
+          </div>
+          <div class="field-group">
+            <label for="public-location">พื้นที่เผยแพร่แบบคร่าว ๆ</label>
+            <input id="public-location" type="text" maxlength="160" placeholder="เช่น ซอย 3 หรือบริเวณศาลา">
+          </div>
+          <label class="switch-row">
+            <input id="public-image-allowed" type="checkbox">
+            <span>
+              <strong>อนุญาตเผยแพร่ภาพที่เลือก</strong>
+              <small>เลือกเฉพาะภาพที่ไม่มีใบหน้า บ้านเลขที่ ทะเบียนรถ หรือข้อมูลส่วนตัว</small>
+            </span>
+          </label>
+          <div class="field-group">
+            <label>ภาพที่อนุญาตเผยแพร่</label>
+            <div id="public-attachments"></div>
+          </div>
+          <button class="button button-primary form-submit" type="submit">บันทึกการเผยแพร่</button>
+        </form>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ผลงานที่แก้ไขแล้ว | Hua Saphan Care</title>
+  <meta name="description" content="รายการผลงานที่แก้ไขแล้วของ Hua Saphan Care">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .works-toolbar {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .works-toolbar h2 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .muted-text {
+      margin: 0;
+      color: var(--color-muted);
+      font-weight: 700;
+    }
+
+    .works-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .work-card {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(28, 140, 135, 0.12);
+      border-radius: var(--radius-card);
+      background: var(--color-card);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .work-card-header {
+      display: grid;
+      gap: 8px;
+    }
+
+    .work-card-title {
+      margin: 0;
+      color: var(--color-text);
+      font-size: 1.1rem;
+      line-height: 1.45;
+    }
+
+    .work-summary {
+      margin: 0;
+      color: var(--color-text);
+      font-weight: 700;
+      line-height: 1.7;
+    }
+
+    .work-meta {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .work-meta div {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--color-bg);
+    }
+
+    .work-meta dt {
+      color: var(--color-muted);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .work-meta dd {
+      margin: 4px 0 0;
+      color: var(--color-text);
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .works-pagination {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .works-pagination .button {
+      width: 100%;
+    }
+
+    .state-card {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    @media (min-width: 720px) {
+      .works-toolbar {
+        grid-template-columns: 1fr auto;
+        align-items: end;
+      }
+
+      .works-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .work-card {
+        min-height: 100%;
+      }
+
+      .works-pagination {
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+      }
+
+      .works-pagination .button {
+        width: auto;
+        min-width: 104px;
+      }
+    }
+  </style>
+  <script src="js/works.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="กลับหน้าแรก Hua Saphan Care">
+      <span class="brand-mark">HSC</span>
+      <span>
+        <strong>Hua Saphan Care</strong>
+        <small>ผลงานที่แก้ไขแล้ว</small>
+      </span>
+    </a>
+    <a class="emergency-link" href="tel:0629617942">ฉุกเฉิน 0629617942</a>
+  </header>
+
+  <main>
+    <section class="page-section" aria-labelledby="works-title">
+      <div class="page-heading">
+        <a class="back-link" href="index.html">กลับหน้าแรก</a>
+        <p class="eyebrow">ผลงานชุมชน</p>
+        <h1 id="works-title">ผลงานที่แก้ไขแล้ว</h1>
+        <p class="page-copy">เรื่องที่ได้รับการแก้ไขและคัดกรองสำหรับเผยแพร่ โดยไม่แสดงข้อมูลส่วนตัวหรือพิกัดละเอียด</p>
+      </div>
+
+      <div id="works-status" class="form-status" role="status" aria-live="polite">กำลังโหลดข้อมูล...</div>
+
+      <section id="works-empty" class="form-card state-card" hidden>
+        <h2>ยังไม่มีผลงานที่เผยแพร่</h2>
+        <p>เมื่อมีเรื่องที่แก้ไขแล้วและผ่านการคัดกรอง จะแสดงในหน้านี้</p>
+      </section>
+
+      <section aria-labelledby="works-list-title">
+        <div class="works-toolbar">
+          <h2 id="works-list-title">รายการล่าสุด</h2>
+          <p id="works-count" class="muted-text"></p>
+        </div>
+        <div id="works-list" class="works-list" aria-live="polite"></div>
+      </section>
+
+      <nav class="works-pagination" aria-label="แบ่งหน้ารายการผลงาน">
+        <button id="prev-page" class="button button-secondary" type="button">ก่อนหน้า</button>
+        <span id="page-summary" class="muted-text"></span>
+        <button id="next-page" class="button button-secondary" type="button">ถัดไป</button>
+      </nav>
+    </section>
+  </main>
+</body>
+</html>

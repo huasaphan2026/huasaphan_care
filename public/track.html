@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ติดตามสถานะ | Hua Saphan Care</title>
+    <meta
+      name="description"
+      content="ติดตามสถานะเรื่องที่แจ้งไว้กับ Hua Saphan Care ด้วยรหัสติดตาม"
+    >
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <script src="js/track.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="กลับหน้าแรก Hua Saphan Care">
+        <span class="brand-mark" aria-hidden="true">HSC</span>
+        <span>Hua Saphan Care</span>
+      </a>
+      <a class="emergency-link" href="tel:0629617942">โทรฉุกเฉิน</a>
+    </header>
+
+    <main>
+      <section class="page-section" aria-labelledby="track-title">
+        <div class="page-heading">
+          <a class="back-link" href="index.html">กลับหน้าแรก</a>
+          <p class="eyebrow">ติดตามเรื่องที่แจ้งไว้</p>
+          <h1 id="track-title">ติดตามสถานะ</h1>
+          <p class="page-copy">
+            กรอกรหัสติดตามที่ได้รับหลังแจ้งเรื่อง เพื่อดูสถานะล่าสุดและความคืบหน้าที่เปิดเผยได้
+          </p>
+        </div>
+
+        <form id="track-form" class="form-card track-search" novalidate>
+          <div class="field-group">
+            <label for="tracking-code">รหัสติดตาม</label>
+            <input
+              id="tracking-code"
+              name="code"
+              type="text"
+              autocomplete="off"
+              inputmode="latin"
+              placeholder="เช่น HSC-2026-0001"
+              aria-describedby="tracking-help tracking-error"
+              required
+            >
+            <p id="tracking-help" class="field-help">ใช้รหัสรูปแบบ HSC-YYYY-0001</p>
+            <p id="tracking-error" class="field-error" data-error-for="code"></p>
+          </div>
+
+          <button id="track-submit" class="button button-primary form-submit" type="submit">
+            ค้นหา
+          </button>
+        </form>
+
+        <div id="track-status" class="form-status track-status" role="status" aria-live="polite" hidden></div>
+
+        <section id="empty-state" class="form-card state-card" aria-live="polite">
+          <p class="eyebrow">ยังไม่ได้ค้นหา</p>
+          <h2>กรอกรหัสติดตามเพื่อดูความคืบหน้า</h2>
+          <p>
+            หน้านี้จะแสดงเฉพาะข้อมูลที่ปลอดภัยต่อสาธารณะ เช่น สถานะ หมวด วันที่แจ้ง และ timeline ที่อนุญาตให้เผยแพร่
+          </p>
+        </section>
+
+        <section id="result-card" class="form-card track-result" aria-labelledby="result-title" hidden>
+          <div class="track-result-header">
+            <div>
+              <p class="eyebrow">ผลการค้นหา</p>
+              <h2 id="result-title"></h2>
+              <p id="result-code" class="tracking-code-text"></p>
+            </div>
+            <span id="status-chip" class="status-chip">-</span>
+          </div>
+
+          <p id="status-description" class="status-description"></p>
+
+          <dl class="detail-list">
+            <div>
+              <dt>หมวด</dt>
+              <dd id="category-name"></dd>
+            </div>
+            <div>
+              <dt>วันที่แจ้ง</dt>
+              <dd id="created-at"></dd>
+            </div>
+            <div>
+              <dt>อัปเดตล่าสุด</dt>
+              <dd id="updated-at"></dd>
+            </div>
+            <div>
+              <dt>พื้นที่โดยสรุป</dt>
+              <dd id="location-text"></dd>
+            </div>
+          </dl>
+
+          <div class="timeline-block">
+            <h3>ความคืบหน้า</h3>
+            <ol id="timeline-list" class="timeline-list"></ol>
+          </div>
+
+          <section id="feedback-section" class="feedback-card" aria-labelledby="feedback-title" hidden>
+            <div>
+              <p class="eyebrow">หลังปิดเรื่อง</p>
+              <h3 id="feedback-title">ให้คะแนนการแก้ไข</h3>
+              <p class="field-help">ความคิดเห็นนี้จะส่งให้ทีมงานปรับปรุง และไม่แสดงสาธารณะอัตโนมัติ</p>
+            </div>
+
+            <form id="feedback-form" class="feedback-form" novalidate>
+              <fieldset class="field-group feedback-score-group">
+                <legend>คะแนน</legend>
+                <div class="score-options" role="radiogroup" aria-describedby="feedback-score-error">
+                  <label>
+                    <input type="radio" name="score" value="1">
+                    <span>1</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="score" value="2">
+                    <span>2</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="score" value="3">
+                    <span>3</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="score" value="4">
+                    <span>4</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="score" value="5">
+                    <span>5</span>
+                  </label>
+                </div>
+                <p id="feedback-score-error" class="field-error" data-error-for="feedback-score"></p>
+              </fieldset>
+
+              <div class="field-group">
+                <label for="feedback-comment">ความคิดเห็นเพิ่มเติม (ถ้ามี)</label>
+                <textarea id="feedback-comment" name="comment" rows="4" maxlength="500"></textarea>
+              </div>
+
+              <button id="feedback-submit" class="button button-primary form-submit" type="submit">
+                ส่งความคิดเห็น
+              </button>
+            </form>
+
+            <div id="feedback-status" class="form-status" role="status" aria-live="polite" hidden></div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

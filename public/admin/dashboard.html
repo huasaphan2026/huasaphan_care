@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แดชบอร์ด | Hua Saphan Care</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <script src="../js/admin-dashboard.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html" aria-label="Hua Saphan Care Admin">
+      <span class="brand-mark">HSC</span>
+      <span>
+        <strong>Hua Saphan Care</strong>
+        <small>Admin Dashboard</small>
+      </span>
+    </a>
+    <button class="button button-secondary" type="button" id="logout-button">ออกจากระบบ</button>
+  </header>
+
+  <main>
+    <section class="page-section">
+      <div class="page-heading">
+        <p class="eyebrow">ภาพรวมการรับเรื่อง</p>
+        <h1>แดชบอร์ด</h1>
+        <p class="page-copy">ติดตามจำนวนเรื่องและรายการล่าสุดของระบบรับเรื่องชุมชนหัวสะพาน</p>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-primary" href="/admin/reports.html">ไปหน้ารายการเรื่อง</a>
+      </div>
+
+      <div class="form-status" id="dashboard-status" role="status" aria-live="polite">กำลังโหลดข้อมูล...</div>
+
+      <section class="quick-grid" aria-label="สรุปสถานะเรื่อง">
+        <article class="quick-card">
+          <span class="quick-icon mint" aria-hidden="true">ใหม่</span>
+          <h2 data-summary="new_reports">0</h2>
+          <p>เรื่องใหม่</p>
+        </article>
+
+        <article class="quick-card">
+          <span class="quick-icon blue" aria-hidden="true">ด่วน</span>
+          <h2 data-summary="urgent_reports">0</h2>
+          <p>เรื่องเร่งด่วน</p>
+        </article>
+
+        <article class="quick-card">
+          <span class="quick-icon green" aria-hidden="true">ทำ</span>
+          <h2 data-summary="in_progress_reports">0</h2>
+          <p>กำลังดำเนินการ</p>
+        </article>
+
+        <article class="quick-card">
+          <span class="quick-icon mint" aria-hidden="true">จบ</span>
+          <h2 data-summary="resolved_reports">0</h2>
+          <p>แก้ไขแล้ว</p>
+        </article>
+      </section>
+
+      <section class="form-card" aria-labelledby="latest-heading">
+        <div class="page-heading">
+          <p class="eyebrow">รวมทั้งหมด <span data-total-reports>0</span> เรื่อง</p>
+          <h2 id="latest-heading">รายการล่าสุด</h2>
+          <p class="page-copy">แสดงเฉพาะข้อมูลที่จำเป็นสำหรับเจ้าหน้าที่ ไม่มีเบอร์โทรหรือข้อมูลส่วนตัวของผู้แจ้ง</p>
+        </div>
+
+        <div class="form-status" id="latest-empty" hidden>ยังไม่มีรายการแจ้งเรื่องในระบบ</div>
+        <ul class="timeline-list" id="latest-reports" aria-live="polite"></ul>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

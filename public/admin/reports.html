@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายการเรื่อง | Hua Saphan Care</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <style>
+    .admin-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .reports-filter {
+      display: grid;
+      gap: 14px;
+    }
+
+    .filter-actions,
+    .pagination-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .reports-summary {
+      margin: 0;
+      color: var(--color-muted);
+      font-weight: 800;
+    }
+
+    .reports-card-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .report-card {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border: 1px solid rgba(31, 42, 42, 0.08);
+      border-radius: var(--radius-card);
+      background: var(--color-bg);
+    }
+
+    .report-card h2 {
+      font-size: 1.08rem;
+    }
+
+    .report-card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .report-card p {
+      margin: 0;
+      color: var(--color-muted);
+      font-weight: 700;
+    }
+
+    .reports-table-wrap {
+      display: none;
+      overflow-x: auto;
+    }
+
+    .reports-table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: collapse;
+    }
+
+    .reports-table th,
+    .reports-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid rgba(31, 42, 42, 0.08);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .reports-table th {
+      color: var(--color-muted);
+      font-size: 0.9rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .reports-table td {
+      font-weight: 700;
+    }
+
+    .reports-table .muted {
+      color: var(--color-muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .pagination-bar {
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    @media (min-width: 720px) {
+      .reports-filter {
+        grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 1fr));
+        align-items: end;
+      }
+
+      .filter-actions {
+        grid-column: 1 / -1;
+      }
+
+      .reports-card-list {
+        display: none;
+      }
+
+      .reports-table-wrap {
+        display: block;
+      }
+
+      .pagination-bar {
+        grid-template-columns: 1fr auto;
+        align-items: center;
+      }
+    }
+  </style>
+  <script src="../js/admin-reports.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/admin/dashboard.html" aria-label="Hua Saphan Care Admin">
+      <span class="brand-mark">HSC</span>
+      <span>
+        <strong>Hua Saphan Care</strong>
+        <small>Admin Reports</small>
+      </span>
+    </a>
+    <a class="button button-secondary" href="/admin/dashboard.html">แดชบอร์ด</a>
+  </header>
+
+  <main>
+    <section class="page-section">
+      <div class="page-heading">
+        <p class="eyebrow">จัดการเรื่องที่แจ้งเข้ามา</p>
+        <h1>รายการเรื่อง</h1>
+        <p class="page-copy">ค้นหาและกรองรายการแจ้งเรื่อง โดยไม่แสดงเบอร์โทรหรือข้อมูลส่วนตัวของผู้แจ้งในหน้านี้</p>
+
+        <div class="admin-toolbar">
+          <a class="button button-secondary" href="/admin/dashboard.html">กลับแดชบอร์ด</a>
+        </div>
+      </div>
+
+      <section class="form-card" aria-labelledby="filter-heading">
+        <h2 id="filter-heading">ค้นหาและตัวกรอง</h2>
+        <form class="reports-filter" id="reports-filter-form">
+          <div class="field-group">
+            <label for="report-search">ค้นหา</label>
+            <input id="report-search" name="q" type="search" autocomplete="off" placeholder="รหัสติดตาม / หัวข้อ / จุดเกิดเหตุ">
+          </div>
+
+          <div class="field-group">
+            <label for="status-filter">สถานะ</label>
+            <select id="status-filter" name="status">
+              <option value="">ทุกสถานะ</option>
+              <option value="new">เรื่องใหม่</option>
+              <option value="accepted">รับเรื่องแล้ว</option>
+              <option value="checking">กำลังตรวจสอบ</option>
+              <option value="in_progress">กำลังดำเนินการ</option>
+              <option value="resolved">แก้ไขแล้ว</option>
+              <option value="closed">ปิดเรื่อง</option>
+              <option value="rejected">ไม่รับดำเนินการ</option>
+              <option value="waiting_info">รอข้อมูลเพิ่มเติม</option>
+              <option value="forwarded">ส่งต่อหน่วยงาน</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="category-filter">หมวด</label>
+            <select id="category-filter" name="category_id">
+              <option value="">ทุกหมวด</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="priority-filter">ความเร่งด่วน</label>
+            <select id="priority-filter" name="priority">
+              <option value="">ทุกระดับ</option>
+              <option value="urgent">เร่งด่วน</option>
+              <option value="high">สำคัญ</option>
+              <option value="normal">ปกติ</option>
+              <option value="low">ทั่วไป</option>
+            </select>
+          </div>
+
+          <div class="filter-actions">
+            <button class="button button-primary" id="search-button" type="submit">ค้นหา</button>
+            <button class="button button-secondary" id="clear-button" type="button">ล้างตัวกรอง</button>
+          </div>
+        </form>
+      </section>
+
+      <div class="form-status" id="reports-status" role="status" aria-live="polite">กำลังโหลดข้อมูล...</div>
+
+      <section class="form-card" aria-labelledby="reports-heading">
+        <div class="page-heading">
+          <p class="eyebrow" id="reports-count">กำลังโหลดรายการ</p>
+          <h2 id="reports-heading">ผลการค้นหา</h2>
+        </div>
+
+        <div class="form-status" id="reports-empty" hidden>ไม่พบข้อมูลตามเงื่อนไขที่ค้นหา</div>
+
+        <div class="reports-card-list" id="reports-card-list" aria-live="polite"></div>
+
+        <div class="reports-table-wrap">
+          <table class="reports-table">
+            <thead>
+              <tr>
+                <th>รหัส</th>
+                <th>หัวข้อ</th>
+                <th>หมวด</th>
+                <th>สถานะ</th>
+                <th>ความเร่งด่วน</th>
+                <th>วันที่แจ้ง</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="reports-table-body"></tbody>
+          </table>
+        </div>
+
+        <nav class="pagination-bar" aria-label="แบ่งหน้า">
+          <p class="reports-summary" id="pagination-summary">หน้า 1 จาก 1</p>
+          <div class="pagination-actions">
+            <button class="button button-secondary" id="prev-page" type="button">ก่อนหน้า</button>
+            <button class="button button-secondary" id="next-page" type="button">ถัดไป</button>
+          </div>
+        </nav>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

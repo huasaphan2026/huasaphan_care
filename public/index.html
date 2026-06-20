@@ -8,13 +8,13 @@
       name="description"
       content="ระบบรับเรื่องและแก้ปัญหาชุมชนหัวสะพาน"
     >
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <script src="/js/app.js" defer></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <script src="js/app.js" defer></script>
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Hua Saphan Care หน้าแรก">
+      <a class="brand" href="/" aria-label="กลับหน้าแรก Hua Saphan Care">
         <span class="brand-mark" aria-hidden="true">HSC</span>
         <span>Hua Saphan Care</span>
       </a>
@@ -22,75 +22,81 @@
     </header>
 
     <main>
-      <section class="hero-section">
-        <div class="hero-content">
+      <section class="hero-section" aria-labelledby="home-title">
+        <div class="hero-card">
           <p class="eyebrow">บ้านหัวสะพาน หมู่ที่ 1</p>
-          <h1>Hua Saphan Care</h1>
+          <h1 id="home-title">Hua Saphan Care</h1>
           <p class="hero-copy">
-            ระบบรับเรื่องและแก้ปัญหาชุมชนหัวสะพาน ใช้งานง่ายบนมือถือ
-            เริ่มจากแจ้งปัญหา ติดตามสถานะ และช่วยกันดูแลชุมชน
+            ระบบรับเรื่องและแก้ปัญหาชุมชนหัวสะพาน
+          </p>
+          <p class="hero-note">
+            แจ้งปัญหาในชุมชน ติดตามสถานะ และดูผลงานที่แก้ไขแล้วได้ง่ายบนมือถือ
           </p>
 
-          <div class="hero-actions" aria-label="การทำงานหลัก">
-            <a class="button button-primary" href="#" aria-disabled="true">
+          <div class="hero-actions" aria-label="เมนูหลัก">
+            <a class="button button-primary" href="/report.html">
               แจ้งเรื่องใหม่
             </a>
-            <a class="button button-secondary" href="#" aria-disabled="true">
+            <a class="button button-secondary" href="/track.html">
               ติดตามสถานะ
+            </a>
+            <a class="button button-secondary" href="/works.html">
+              ผลงานที่แก้ไขแล้ว
             </a>
           </div>
         </div>
       </section>
 
-      <section class="notice-section" aria-labelledby="emergency-title">
-        <div class="notice-card">
-          <h2 id="emergency-title">กรณีฉุกเฉิน</h2>
-          <p>
-            หากเป็นเหตุฉุกเฉินที่ต้องการความช่วยเหลือทันที
-            กรุณาโทรติดต่อผู้นำชุมชนหรือหน่วยงานฉุกเฉินโดยตรง
-          </p>
-          <a class="phone-link" href="tel:0629617942">0629617942</a>
+      <section class="emergency-section" aria-labelledby="emergency-title">
+        <div class="emergency-card">
+          <div>
+            <p class="eyebrow">กรณีเร่งด่วน</p>
+            <h2 id="emergency-title">เหตุฉุกเฉินให้โทรโดยตรง</h2>
+            <p>
+              หากเป็นเหตุฉุกเฉินที่ต้องการความช่วยเหลือทันที กรุณาโทรติดต่อผู้นำชุมชนหรือหน่วยงานฉุกเฉินโดยตรง
+            </p>
+          </div>
+          <a class="phone-link" href="tel:0629617942" aria-label="โทร 0629617942">
+            0629617942
+          </a>
         </div>
       </section>
 
-      <section class="category-section" aria-labelledby="category-title">
+      <section class="quick-section" aria-labelledby="quick-title">
         <div class="section-heading">
-          <p class="eyebrow">หมวดปัญหาเบื้องต้น</p>
-          <h2 id="category-title">เรื่องที่ชุมชนแจ้งได้</h2>
+          <p class="eyebrow">เริ่มใช้งาน</p>
+          <h2 id="quick-title">เลือกสิ่งที่ต้องการทำ</h2>
         </div>
 
-        <div class="category-grid">
-          <article class="category-card mint">
-            <h3>ไฟฟ้า / ไฟทาง</h3>
-            <p>ไฟทางเสีย จุดมืด หรือเสาไฟมีปัญหา</p>
-          </article>
-          <article class="category-card blue">
-            <h3>ถนน / ทางเดิน</h3>
-            <p>ถนนชำรุด หลุมบ่อ หรือทางเดินไม่ปลอดภัย</p>
-          </article>
-          <article class="category-card yellow">
-            <h3>น้ำ / ท่อระบายน้ำ</h3>
-            <p>น้ำประปาไม่ไหล ท่ออุดตัน หรือน้ำท่วมขัง</p>
-          </article>
-          <article class="category-card green">
-            <h3>ขยะ / ความสะอาด</h3>
-            <p>จุดทิ้งขยะ กลิ่นเหม็น หรือพื้นที่สกปรก</p>
-          </article>
-          <article class="category-card coral">
-            <h3>ความปลอดภัย</h3>
-            <p>จุดเสี่ยง อุบัติเหตุ หรือสิ่งกีดขวาง</p>
-          </article>
-          <article class="category-card lavender">
-            <h3>สุขภาพ / ผู้เปราะบาง</h3>
-            <p>ผู้สูงอายุ ผู้ป่วย หรือผู้ต้องการความช่วยเหลือ</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="system-section" aria-labelledby="system-title">
-        <div class="status-card">
-          <h2 id="system-title">สถานะระบบ</h2>
-          <p id="health-status" class="muted">กำลังตรวจสอบ API...</p>
+        <div class="quick-grid">
+          <a class="quick-card mint" href="/report.html">
+            <span class="quick-icon" aria-hidden="true">+</span>
+            <span>
+              <strong>แจ้งเรื่องใหม่</strong>
+              <small>ส่งรายละเอียดปัญหา พร้อมแนบภาพได้</small>
+            </span>
+          </a>
+          <a class="quick-card blue" href="/track.html">
+            <span class="quick-icon" aria-hidden="true">⌕</span>
+            <span>
+              <strong>ติดตามสถานะ</strong>
+              <small>ใช้รหัสติดตามเพื่อตรวจความคืบหน้า</small>
+            </span>
+          </a>
+          <a class="quick-card green" href="/works.html">
+            <span class="quick-icon" aria-hidden="true">✓</span>
+            <span>
+              <strong>ผลงานที่แก้ไขแล้ว</strong>
+              <small>ดูเรื่องที่ดำเนินการและเผยแพร่แล้ว</small>
+            </span>
+          </a>
+          <a class="quick-card blue" href="/emergency.html">
+            <span class="quick-icon" aria-hidden="true">!</span>
+            <span>
+              <strong>ช่องทางฉุกเฉิน</strong>
+              <small>ดูเบอร์ติดต่อและคำเตือนสำหรับเหตุเร่งด่วน</small>
+            </span>
+          </a>
         </div>
       </section>
     </main>
