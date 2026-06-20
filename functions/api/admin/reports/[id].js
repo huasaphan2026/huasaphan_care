@@ -2,6 +2,8 @@ import { jsonError, jsonOk } from "../../_utils/response.js";
 
 const PRIVATE_REPORT_ROLES = new Set(["super_admin", "admin", "staff"]);
 const KNOWN_REPORT_ROLES = new Set(["super_admin", "admin", "staff", "viewer"]);
+const MANAGER_ROLES = new Set(["super_admin", "admin"]);
+const STAFF_ROLE = "staff";
 
 function methodNotAllowed() {
   const response = jsonError("METHOD_NOT_ALLOWED", "Method not allowed", 405);
@@ -20,6 +22,26 @@ function canViewPrivateReport(user) {
 
 function hasKnownReportRole(user) {
   return KNOWN_REPORT_ROLES.has(String(user?.role || ""));
+}
+
+function isStaff(user) {
+  return String(user?.role || "") === STAFF_ROLE;
+}
+
+function isManager(user) {
+  return MANAGER_ROLES.has(String(user?.role || ""));
+}
+
+function normalizeUserId(value) {
+  const userId = Number.parseInt(String(value || ""), 10);
+  return Number.isInteger(userId) && userId > 0 ? userId : null;
+}
+
+function hasAssignedReportAccess(report, user) {
+  const assignedTo = normalizeUserId(report?.assigned_to);
+  const userId = normalizeUserId(user?.id);
+
+  return Boolean(assignedTo && userId && assignedTo === userId);
 }
 
 function toBoolean(value) {
@@ -231,6 +253,18 @@ async function getViewerReport(db, reportId) {
     .first();
 }
 
+async function getReportAccess(db, reportId) {
+  return db
+    .prepare(
+      `SELECT id, assigned_to
+      FROM reports
+      WHERE id = ?
+      LIMIT 1`
+    )
+    .bind(reportId)
+    .first();
+}
+
 async function getPrivateTimeline(db, reportId) {
   const { results } = await db
     .prepare(
@@ -367,10 +401,26 @@ export async function onRequest({ request, env, params, data = {} }) {
           permissions: {
             can_view_private: false,
             private_data_masked: true,
+            can_update_status: false,
+            can_add_update: false,
+            can_assign: false,
+            can_publish: false,
           },
         },
         "success"
       );
+    }
+
+    if (isStaff(data.user)) {
+      const reportAccess = await getReportAccess(env.DB, reportId);
+
+      if (!reportAccess) {
+        return jsonError("NOT_FOUND", "ไม่พบรายการเรื่อง", 404);
+      }
+
+      if (!hasAssignedReportAccess(reportAccess, data.user)) {
+        return jsonError("FORBIDDEN", "ไม่มีสิทธิ์ดูรายละเอียดเรื่องนี้", 403);
+      }
     }
 
     const report = await getPrivateReport(env.DB, reportId);
@@ -397,6 +447,10 @@ export async function onRequest({ request, env, params, data = {} }) {
         permissions: {
           can_view_private: true,
           private_data_masked: false,
+          can_update_status: isManager(data.user) || isStaff(data.user),
+          can_add_update: isManager(data.user) || isStaff(data.user),
+          can_assign: isManager(data.user),
+          can_publish: isManager(data.user),
         },
       },
       "success"

@@ -104,8 +104,8 @@
       }
       state.detail = result.data;
       renderReport(state.detail);
-      setFormsDisabled(!canManage(state.detail));
-      showStatus(canManage(state.detail) ? "โหลดข้อมูลสำเร็จ" : "โหลดข้อมูลสำเร็จ คุณมีสิทธิ์ดูข้อมูลเท่านั้น", "success");
+      setFormsDisabled(false);
+      showStatus(hasAnyActionPermission(state.detail) ? "โหลดข้อมูลสำเร็จ" : "โหลดข้อมูลสำเร็จ คุณมีสิทธิ์ดูข้อมูลเท่านั้น", "success");
     } catch (error) {
       showStatus(error.message || "โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่", "error");
       setFormsDisabled(true);
@@ -322,7 +322,7 @@
 
   async function handleStatusSubmit(event) {
     event.preventDefault();
-    if (state.isBusy || !canManage(state.detail)) {
+    if (state.isBusy || !canUpdateStatus(state.detail)) {
       return;
     }
 
@@ -346,7 +346,7 @@
 
   async function handleUpdateSubmit(event) {
     event.preventDefault();
-    if (state.isBusy || !canManage(state.detail)) {
+    if (state.isBusy || !canAddUpdate(state.detail)) {
       return;
     }
 
@@ -377,7 +377,7 @@
 
   async function handleAssignmentSubmit(event) {
     event.preventDefault();
-    if (state.isBusy || !canManage(state.detail)) {
+    if (state.isBusy || !canAssign(state.detail)) {
       return;
     }
 
@@ -408,7 +408,7 @@
 
   async function handlePublicSubmit(event) {
     event.preventDefault();
-    if (state.isBusy || !canManage(state.detail)) {
+    if (state.isBusy || !canPublish(state.detail)) {
       return;
     }
 
@@ -509,21 +509,47 @@
     return "ระบบไม่สามารถทำรายการได้ กรุณาลองใหม่";
   }
 
-  function canManage(data) {
-    return Boolean(data && data.permissions && data.permissions.can_view_private);
+  function canUpdateStatus(data) {
+    return Boolean(data && data.permissions && data.permissions.can_update_status);
+  }
+
+  function canAddUpdate(data) {
+    return Boolean(data && data.permissions && data.permissions.can_add_update);
+  }
+
+  function canAssign(data) {
+    return Boolean(data && data.permissions && data.permissions.can_assign);
+  }
+
+  function canPublish(data) {
+    return Boolean(data && data.permissions && data.permissions.can_publish);
+  }
+
+  function hasAnyActionPermission(data) {
+    return canUpdateStatus(data) || canAddUpdate(data) || canAssign(data) || canPublish(data);
   }
 
   function setFormsDisabled(disabled) {
-    [els.statusForm, els.updateForm, els.assignmentForm, els.publicForm].forEach(function (form) {
-      Array.prototype.forEach.call(form.elements, function (element) {
-        element.disabled = disabled;
-      });
-    });
+    setFormDisabled(els.statusForm, disabled || !canUpdateStatus(state.detail));
+    setFormDisabled(els.updateForm, disabled || !canAddUpdate(state.detail));
+    setFormDisabled(els.assignmentForm, disabled || !canAssign(state.detail));
+    setFormDisabled(els.publicForm, disabled || !canPublish(state.detail));
   }
 
   function setFormBusy(form, busy) {
+    if (!busy) {
+      setFormsDisabled(false);
+      return;
+    }
+
     Array.prototype.forEach.call(form.elements, function (element) {
-      element.disabled = busy || !canManage(state.detail);
+      element.disabled = true;
+    });
+  }
+
+  function setFormDisabled(form, disabled) {
+    Array.prototype.forEach.call(form.elements, function (element) {
+      element.disabled = disabled;
     });
   }
 

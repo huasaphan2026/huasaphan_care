@@ -14,6 +14,7 @@ const VALID_STATUSES = new Set([
   "forwarded",
 ]);
 const VALID_PRIORITIES = new Set(["low", "normal", "high", "urgent"]);
+const STAFF_ROLE = "staff";
 
 function methodNotAllowed() {
   const response = jsonError("METHOD_NOT_ALLOWED", "Method not allowed", 405);
@@ -63,7 +64,16 @@ function toNumber(value) {
   return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
-function buildFilters(searchParams) {
+function normalizeUserId(value) {
+  const userId = Number.parseInt(String(value || ""), 10);
+  return Number.isInteger(userId) && userId > 0 ? userId : null;
+}
+
+function isStaff(user) {
+  return String(user?.role || "") === STAFF_ROLE;
+}
+
+function buildFilters(searchParams, user) {
   const page = parsePositiveInteger(searchParams.get("page"), 1);
   const limit = parsePositiveInteger(
     searchParams.get("limit") || searchParams.get("pageSize"),
@@ -83,6 +93,7 @@ function buildFilters(searchParams) {
     priority,
     categoryId,
     q,
+    assignedTo: isStaff(user) ? normalizeUserId(user.id) || -1 : null,
   };
 }
 
@@ -111,6 +122,11 @@ function buildWhereClause(filters) {
       "(r.tracking_code LIKE ? ESCAPE '\\' OR r.title LIKE ? ESCAPE '\\' OR r.location_text LIKE ? ESCAPE '\\')"
     );
     bindings.push(query, query, query);
+  }
+
+  if (filters.assignedTo) {
+    clauses.push("r.assigned_to = ?");
+    bindings.push(filters.assignedTo);
   }
 
   return {
@@ -174,7 +190,7 @@ export async function onRequest({ request, env, data = {} }) {
   }
 
   const url = new URL(request.url);
-  const filters = buildFilters(url.searchParams);
+  const filters = buildFilters(url.searchParams, data.user);
   const where = buildWhereClause(filters);
 
   try {

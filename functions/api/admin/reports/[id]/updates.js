@@ -73,22 +73,19 @@ async function getReport(db, reportId) {
     .first();
 }
 
-async function isAssignedStaff(db, reportId, userId) {
-  const assignment = await db
-    .prepare(
-      `SELECT id
-      FROM assignments
-      WHERE report_id = ?
-        AND user_id = ?
-      LIMIT 1`
-    )
-    .bind(reportId, userId)
-    .first();
-
-  return Boolean(assignment);
+function normalizeUserId(value) {
+  const userId = Number.parseInt(String(value || ""), 10);
+  return Number.isInteger(userId) && userId > 0 ? userId : null;
 }
 
-async function canAddUpdate(db, report, user) {
+function hasAssignedReportAccess(report, user) {
+  const assignedTo = normalizeUserId(report?.assigned_to);
+  const userId = normalizeUserId(user?.id);
+
+  return Boolean(assignedTo && userId && assignedTo === userId);
+}
+
+function canAddUpdate(report, user) {
   const role = String(user?.role || "");
 
   if (MANAGER_ROLES.has(role)) {
@@ -99,11 +96,7 @@ async function canAddUpdate(db, report, user) {
     return false;
   }
 
-  if (report.assigned_to === user.id) {
-    return true;
-  }
-
-  return isAssignedStaff(db, report.id, user.id);
+  return hasAssignedReportAccess(report, user);
 }
 
 function mayContainSensitivePublicData(text) {
@@ -198,7 +191,7 @@ export async function onRequest({ request, env, params, data = {} }) {
       return jsonError("NOT_FOUND", "ไม่พบรายการเรื่อง", 404);
     }
 
-    const allowed = await canAddUpdate(env.DB, report, user);
+    const allowed = canAddUpdate(report, user);
 
     if (!allowed) {
       return jsonError("FORBIDDEN", "ไม่มีสิทธิ์ทำรายการนี้", 403);
