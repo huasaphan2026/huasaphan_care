@@ -115,20 +115,21 @@
   function renderReport(data) {
     var report = data.report || {};
     var category = data.category || {};
+    var canViewPrivate = Boolean(data.permissions && data.permissions.can_view_private);
 
-    setText(els.title, report.title || "รายละเอียดเรื่อง");
+    setText(els.title, report.title || report.public_summary || "รายละเอียดเรื่อง");
     setText(els.trackingCode, report.tracking_code || "-");
 
     clear(els.summaryChips);
     els.summaryChips.appendChild(createChip(getStatusLabel(report.status), getStatusClass(report.status)));
     els.summaryChips.appendChild(createChip(getPriorityLabel(report.priority), getPriorityClass(report.priority)));
 
-    renderDetailList(report, category);
-    renderReporter(data.reporter || {});
+    renderDetailList(report, category, canViewPrivate);
+    renderReporter(data.reporter || {}, canViewPrivate);
     renderTimeline(data.timeline || []);
-    renderAttachments(data.attachments || []);
-    renderAssignments(data.assignments || []);
-    renderPublicSettings(data.public_settings || {}, data.attachments || []);
+    renderAttachments(data.attachments || [], canViewPrivate);
+    renderAssignments(data.assignments || [], canViewPrivate);
+    renderPublicSettings(data.public_settings || {}, canViewPrivate ? data.attachments || [] : []);
 
     if (report.status) {
       els.statusInput.value = report.status;
@@ -136,33 +137,37 @@
     }
   }
 
-  function renderDetailList(report, category) {
+  function renderDetailList(report, category, canViewPrivate) {
     clear(els.reportDetailList);
     appendDetail(els.reportDetailList, "หมวด", category.name || "-");
     appendDetail(els.reportDetailList, "สถานะ", getStatusLabel(report.status));
     appendDetail(els.reportDetailList, "ความเร่งด่วน", getPriorityLabel(report.priority));
-    appendDetail(els.reportDetailList, "จุดเกิดเหตุ", report.location_text || "-");
+    appendDetail(
+      els.reportDetailList,
+      canViewPrivate ? "จุดเกิดเหตุ" : "พื้นที่เผยแพร่",
+      canViewPrivate ? report.location_text || "-" : report.public_location_label || "ไม่มีสิทธิ์ดูข้อมูลนี้"
+    );
     appendDetail(els.reportDetailList, "วันที่แจ้ง", formatThaiDate(report.created_at));
     appendDetail(els.reportDetailList, "อัปเดตล่าสุด", formatThaiDate(report.updated_at));
     if (report.closed_at) {
       appendDetail(els.reportDetailList, "วันที่ปิดเรื่อง", formatThaiDate(report.closed_at));
     }
-    if (report.assigned_name) {
+    if (canViewPrivate && report.assigned_name) {
       appendDetail(els.reportDetailList, "ผู้รับผิดชอบปัจจุบัน", report.assigned_name);
     }
-    setText(els.reportDetailText, report.detail || "-");
+    setText(els.reportDetailText, canViewPrivate ? report.detail || "-" : report.public_summary || "ไม่มีสิทธิ์ดูข้อมูลนี้");
   }
 
-  function renderReporter(reporter) {
+  function renderReporter(reporter, canViewPrivate) {
     clear(els.reporterList);
     setText(els.reporterNote, "");
 
-    appendDetail(els.reporterList, "ไม่ประสงค์เปิดเผยชื่อ", reporter.anonymous ? "ใช่" : "ไม่ใช่");
-
-    if (reporter.masked) {
-      setText(els.reporterNote, "ข้อมูลผู้แจ้งถูกซ่อนตามสิทธิ์ของบัญชีนี้");
+    if (!canViewPrivate || reporter.masked) {
+      setText(els.reporterNote, "ไม่มีสิทธิ์ดูข้อมูลนี้");
       return;
     }
+
+    appendDetail(els.reporterList, "ไม่ประสงค์เปิดเผยชื่อ", reporter.anonymous ? "ใช่" : "ไม่ใช่");
 
     if (reporter.name) {
       appendDetail(els.reporterList, "ชื่อผู้แจ้ง", reporter.name);
@@ -203,8 +208,15 @@
     });
   }
 
-  function renderAttachments(items) {
+  function renderAttachments(items, canViewPrivate) {
     clear(els.attachmentsList);
+
+    if (!canViewPrivate) {
+      els.attachmentsEmpty.hidden = false;
+      setText(els.attachmentsEmpty, "ไม่มีสิทธิ์ดูข้อมูลนี้");
+      return;
+    }
+
     els.attachmentsEmpty.hidden = items.length > 0;
 
     items.forEach(function (item) {
@@ -229,8 +241,15 @@
     });
   }
 
-  function renderAssignments(items) {
+  function renderAssignments(items, canViewPrivate) {
     clear(els.assignmentsList);
+
+    if (!canViewPrivate) {
+      els.assignmentsEmpty.hidden = false;
+      setText(els.assignmentsEmpty, "ไม่มีสิทธิ์ดูข้อมูลนี้");
+      return;
+    }
+
     els.assignmentsEmpty.hidden = items.length > 0;
 
     items.forEach(function (item) {

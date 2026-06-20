@@ -1,6 +1,7 @@
 import { jsonError, jsonOk } from "../../_utils/response.js";
 
 const PRIVATE_REPORT_ROLES = new Set(["super_admin", "admin", "staff"]);
+const KNOWN_REPORT_ROLES = new Set(["super_admin", "admin", "staff", "viewer"]);
 
 function methodNotAllowed() {
   const response = jsonError("METHOD_NOT_ALLOWED", "Method not allowed", 405);
@@ -17,11 +18,15 @@ function canViewPrivateReport(user) {
   return PRIVATE_REPORT_ROLES.has(String(user?.role || ""));
 }
 
+function hasKnownReportRole(user) {
+  return KNOWN_REPORT_ROLES.has(String(user?.role || ""));
+}
+
 function toBoolean(value) {
   return value === 1;
 }
 
-function normalizeReport(row, includePrivate) {
+function normalizePrivateReport(row) {
   return {
     id: row.id,
     tracking_code: row.tracking_code,
@@ -29,13 +34,13 @@ function normalizeReport(row, includePrivate) {
     title: row.title,
     detail: row.detail,
     location_text: row.location_text,
-    location_lat: includePrivate ? row.location_lat : null,
-    location_lng: includePrivate ? row.location_lng : null,
+    location_lat: row.location_lat,
+    location_lng: row.location_lng,
     priority: row.priority,
     status: row.status,
     anonymous: toBoolean(row.anonymous),
-    assigned_to: includePrivate ? row.assigned_to : null,
-    assigned_name: includePrivate ? row.assigned_name : null,
+    assigned_to: row.assigned_to,
+    assigned_name: row.assigned_name,
     public_visible: toBoolean(row.public_visible),
     public_summary: row.public_summary,
     public_location_label: row.public_location_label,
@@ -46,7 +51,20 @@ function normalizeReport(row, includePrivate) {
   };
 }
 
-function normalizeCategory(row) {
+function normalizeViewerReport(row) {
+  return {
+    tracking_code: row.tracking_code,
+    priority: row.priority,
+    status: row.status,
+    public_summary: row.public_summary,
+    public_location_label: row.public_location_label,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    closed_at: row.closed_at,
+  };
+}
+
+function normalizePrivateCategory(row) {
   return {
     id: row.category_id,
     code: row.category_code,
@@ -58,16 +76,13 @@ function normalizeCategory(row) {
   };
 }
 
-function normalizeReporter(row, includePrivate) {
-  if (!includePrivate) {
-    return {
-      anonymous: toBoolean(row.anonymous),
-      name: null,
-      phone: null,
-      masked: true,
-    };
-  }
+function normalizeViewerCategory(row) {
+  return {
+    name: row.category_name,
+  };
+}
 
+function normalizePrivateReporter(row) {
   return {
     anonymous: toBoolean(row.anonymous),
     name: row.reporter_name || null,
@@ -76,7 +91,13 @@ function normalizeReporter(row, includePrivate) {
   };
 }
 
-function normalizeTimeline(rows = []) {
+function normalizeViewerReporter() {
+  return {
+    masked: true,
+  };
+}
+
+function normalizePrivateTimeline(rows = []) {
   return rows.map((row) => ({
     id: row.id,
     status: row.status,
@@ -89,26 +110,35 @@ function normalizeTimeline(rows = []) {
   }));
 }
 
-function normalizeAssignments(rows = [], includePrivate) {
+function normalizeViewerTimeline(rows = []) {
   return rows.map((row) => ({
-    id: row.id,
-    report_id: row.report_id,
-    user_id: includePrivate ? row.user_id : null,
-    assigned_name: includePrivate ? row.assigned_name : null,
-    assigned_role: includePrivate ? row.assigned_role : null,
-    assigned_by: includePrivate ? row.assigned_by : null,
-    assigned_by_name: includePrivate ? row.assigned_by_name : null,
-    due_date: row.due_date,
-    note: includePrivate ? row.note : null,
+    status: row.status,
+    update_note: row.update_note,
+    is_public: true,
     created_at: row.created_at,
   }));
 }
 
-function normalizeAttachments(rows = [], includePrivate) {
+function normalizePrivateAssignments(rows = []) {
   return rows.map((row) => ({
     id: row.id,
     report_id: row.report_id,
-    r2_key: includePrivate ? row.r2_key : null,
+    user_id: row.user_id,
+    assigned_name: row.assigned_name,
+    assigned_role: row.assigned_role,
+    assigned_by: row.assigned_by,
+    assigned_by_name: row.assigned_by_name,
+    due_date: row.due_date,
+    note: row.note,
+    created_at: row.created_at,
+  }));
+}
+
+function normalizePrivateAttachments(rows = []) {
+  return rows.map((row) => ({
+    id: row.id,
+    report_id: row.report_id,
+    r2_key: row.r2_key,
     file_name: row.file_name,
     file_type: row.file_type,
     file_size: row.file_size,
@@ -120,7 +150,7 @@ function normalizeAttachments(rows = [], includePrivate) {
   }));
 }
 
-function normalizePublicSettings(row) {
+function normalizePrivatePublicSettings(row) {
   return {
     public_visible: toBoolean(row.public_visible),
     public_summary: row.public_summary,
@@ -129,7 +159,14 @@ function normalizePublicSettings(row) {
   };
 }
 
-async function getReport(db, reportId) {
+function normalizeViewerPublicSettings(row) {
+  return {
+    public_summary: row.public_summary,
+    public_location_label: row.public_location_label,
+  };
+}
+
+async function getPrivateReport(db, reportId) {
   return db
     .prepare(
       `SELECT
@@ -171,10 +208,30 @@ async function getReport(db, reportId) {
     .first();
 }
 
-async function getTimeline(db, reportId, includePrivate) {
-  const visibilityFilter = includePrivate ? "" : "AND ru.is_public = ?";
-  const bindings = includePrivate ? [reportId] : [reportId, 1];
+async function getViewerReport(db, reportId) {
+  return db
+    .prepare(
+      `SELECT
+        r.id,
+        r.tracking_code,
+        r.priority,
+        r.status,
+        r.public_summary,
+        r.public_location_label,
+        r.created_at,
+        r.updated_at,
+        r.closed_at,
+        c.name AS category_name
+      FROM reports r
+      JOIN categories c ON c.id = r.category_id
+      WHERE r.id = ?
+      LIMIT 1`
+    )
+    .bind(reportId)
+    .first();
+}
 
+async function getPrivateTimeline(db, reportId) {
   const { results } = await db
     .prepare(
       `SELECT
@@ -189,10 +246,27 @@ async function getTimeline(db, reportId, includePrivate) {
       FROM report_updates ru
       LEFT JOIN users u ON u.id = ru.updated_by
       WHERE ru.report_id = ?
-        ${visibilityFilter}
       ORDER BY ru.created_at ASC, ru.id ASC`
     )
-    .bind(...bindings)
+    .bind(reportId)
+    .all();
+
+  return results || [];
+}
+
+async function getViewerTimeline(db, reportId) {
+  const { results } = await db
+    .prepare(
+      `SELECT
+        ru.status,
+        ru.update_note,
+        ru.created_at
+      FROM report_updates ru
+      WHERE ru.report_id = ?
+        AND ru.is_public = ?
+      ORDER BY ru.created_at ASC, ru.id ASC`
+    )
+    .bind(reportId, 1)
     .all();
 
   return results || [];
@@ -224,10 +298,7 @@ async function getAssignments(db, reportId) {
   return results || [];
 }
 
-async function getAttachments(db, reportId, includePrivate) {
-  const visibilityFilter = includePrivate ? "" : "AND a.public_allowed = ?";
-  const bindings = includePrivate ? [reportId] : [reportId, 1];
-
+async function getAttachments(db, reportId) {
   const { results } = await db
     .prepare(
       `SELECT
@@ -245,10 +316,9 @@ async function getAttachments(db, reportId, includePrivate) {
       FROM attachments a
       LEFT JOIN users u ON u.id = a.uploaded_by
       WHERE a.report_id = ?
-        ${visibilityFilter}
       ORDER BY a.uploaded_at ASC, a.id ASC`
     )
-    .bind(...bindings)
+    .bind(reportId)
     .all();
 
   return results || [];
@@ -263,6 +333,10 @@ export async function onRequest({ request, env, params, data = {} }) {
     return jsonError("UNAUTHORIZED", "กรุณาเข้าสู่ระบบ", 401);
   }
 
+  if (!hasKnownReportRole(data.user)) {
+    return jsonError("FORBIDDEN", "บัญชีนี้ไม่มีสิทธิ์ดูรายละเอียดเรื่อง", 403);
+  }
+
   const reportId = parseReportId(params);
 
   if (!reportId) {
@@ -272,30 +346,57 @@ export async function onRequest({ request, env, params, data = {} }) {
   const includePrivate = canViewPrivateReport(data.user);
 
   try {
-    const report = await getReport(env.DB, reportId);
+    if (!includePrivate) {
+      const report = await getViewerReport(env.DB, reportId);
+
+      if (!report) {
+        return jsonError("NOT_FOUND", "ไม่พบรายการเรื่อง", 404);
+      }
+
+      const timelineRows = await getViewerTimeline(env.DB, report.id);
+
+      return jsonOk(
+        {
+          report: normalizeViewerReport(report),
+          category: normalizeViewerCategory(report),
+          reporter: normalizeViewerReporter(),
+          timeline: normalizeViewerTimeline(timelineRows),
+          assignments: [],
+          attachments: [],
+          public_settings: normalizeViewerPublicSettings(report),
+          permissions: {
+            can_view_private: false,
+            private_data_masked: true,
+          },
+        },
+        "success"
+      );
+    }
+
+    const report = await getPrivateReport(env.DB, reportId);
 
     if (!report) {
       return jsonError("NOT_FOUND", "ไม่พบรายการเรื่อง", 404);
     }
 
     const [timelineRows, assignmentRows, attachmentRows] = await Promise.all([
-      getTimeline(env.DB, reportId, includePrivate),
+      getPrivateTimeline(env.DB, reportId),
       getAssignments(env.DB, reportId),
-      getAttachments(env.DB, reportId, includePrivate),
+      getAttachments(env.DB, reportId),
     ]);
 
     return jsonOk(
       {
-        report: normalizeReport(report, includePrivate),
-        category: normalizeCategory(report),
-        reporter: normalizeReporter(report, includePrivate),
-        timeline: normalizeTimeline(timelineRows),
-        assignments: normalizeAssignments(assignmentRows, includePrivate),
-        attachments: normalizeAttachments(attachmentRows, includePrivate),
-        public_settings: normalizePublicSettings(report),
+        report: normalizePrivateReport(report),
+        category: normalizePrivateCategory(report),
+        reporter: normalizePrivateReporter(report),
+        timeline: normalizePrivateTimeline(timelineRows),
+        assignments: normalizePrivateAssignments(assignmentRows),
+        attachments: normalizePrivateAttachments(attachmentRows),
+        public_settings: normalizePrivatePublicSettings(report),
         permissions: {
-          can_view_private: includePrivate,
-          private_data_masked: !includePrivate,
+          can_view_private: true,
+          private_data_masked: false,
         },
       },
       "success"
