@@ -146,6 +146,20 @@
     return link;
   }
 
+  function getReportSummary(report) {
+    return report.title || report.public_summary || report.tracking_code || "-";
+  }
+
+  function getReportLocationLabel(report) {
+    return report.location_text || report.public_location_label || "-";
+  }
+
+  function appendDetailLink(container, report) {
+    if (report && report.id) {
+      container.appendChild(createDetailLink(report));
+    }
+  }
+
   function clearElement(element) {
     if (element) {
       element.textContent = "";
@@ -325,7 +339,7 @@
 
     var header = document.createElement("div");
     header.appendChild(createTextElement("p", report.tracking_code || "-", "tracking-code-text"));
-    header.appendChild(createTextElement("h2", report.title || "ไม่มีหัวข้อ"));
+    header.appendChild(createTextElement("h2", getReportSummary(report)));
     card.appendChild(header);
 
     var meta = document.createElement("div");
@@ -335,9 +349,9 @@
     card.appendChild(meta);
 
     card.appendChild(createTextElement("p", "หมวด: " + (report.category_name || "-")));
-    card.appendChild(createTextElement("p", "จุดเกิดเหตุ: " + (report.location_text || "-")));
+    card.appendChild(createTextElement("p", "จุดเกิดเหตุ: " + getReportLocationLabel(report)));
     card.appendChild(createTextElement("p", "วันที่แจ้ง: " + formatThaiDate(report.created_at)));
-    card.appendChild(createDetailLink(report));
+    appendDetailLink(card, report);
 
     cardList.appendChild(card);
   }
@@ -358,14 +372,14 @@
 
     codeCell.textContent = report.tracking_code || "-";
 
-    titleCell.appendChild(createTextElement("strong", report.title || "ไม่มีหัวข้อ"));
-    titleCell.appendChild(createTextElement("div", report.location_text || "-", "muted"));
+    titleCell.appendChild(createTextElement("strong", getReportSummary(report)));
+    titleCell.appendChild(createTextElement("div", getReportLocationLabel(report), "muted"));
 
     categoryCell.textContent = report.category_name || "-";
     statusCell.appendChild(createChip(getStatusLabel(report.status), report.status));
     priorityCell.textContent = getPriorityLabel(report.priority);
     dateCell.textContent = formatThaiDate(report.created_at);
-    actionCell.appendChild(createDetailLink(report));
+    appendDetailLink(actionCell, report);
 
     row.appendChild(codeCell);
     row.appendChild(titleCell);

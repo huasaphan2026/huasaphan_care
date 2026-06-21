@@ -14,6 +14,8 @@ const VALID_STATUSES = new Set([
   "forwarded",
 ]);
 const VALID_PRIORITIES = new Set(["low", "normal", "high", "urgent"]);
+const PRIVATE_REPORT_ROLES = new Set(["super_admin", "admin", "staff"]);
+const KNOWN_REPORT_ROLES = new Set(["super_admin", "admin", "staff", "viewer"]);
 const STAFF_ROLE = "staff";
 
 function methodNotAllowed() {
@@ -73,7 +75,15 @@ function isStaff(user) {
   return String(user?.role || "") === STAFF_ROLE;
 }
 
-function buildFilters(searchParams, user) {
+function canViewPrivateReports(user) {
+  return PRIVATE_REPORT_ROLES.has(String(user?.role || ""));
+}
+
+function hasKnownReportRole(user) {
+  return KNOWN_REPORT_ROLES.has(String(user?.role || ""));
+}
+
+function buildFilters(searchParams, user, includePrivate) {
   const page = parsePositiveInteger(searchParams.get("page"), 1);
   const limit = parsePositiveInteger(
     searchParams.get("limit") || searchParams.get("pageSize"),
@@ -93,6 +103,7 @@ function buildFilters(searchParams, user) {
     priority,
     categoryId,
     q,
+    includePrivate,
     assignedTo: isStaff(user) ? normalizeUserId(user.id) || -1 : null,
   };
 }
@@ -118,10 +129,18 @@ function buildWhereClause(filters) {
 
   if (filters.q) {
     const query = `%${escapeLike(filters.q)}%`;
-    clauses.push(
-      "(r.tracking_code LIKE ? ESCAPE '\\' OR r.title LIKE ? ESCAPE '\\' OR r.location_text LIKE ? ESCAPE '\\')"
-    );
-    bindings.push(query, query, query);
+
+    if (filters.includePrivate) {
+      clauses.push(
+        "(r.tracking_code LIKE ? ESCAPE '\\' OR r.title LIKE ? ESCAPE '\\' OR r.location_text LIKE ? ESCAPE '\\')"
+      );
+      bindings.push(query, query, query);
+    } else {
+      clauses.push(
+        "(r.tracking_code LIKE ? ESCAPE '\\' OR r.public_summary LIKE ? ESCAPE '\\' OR r.public_location_label LIKE ? ESCAPE '\\' OR c.name LIKE ? ESCAPE '\\')"
+      );
+      bindings.push(query, query, query, query);
+    }
   }
 
   if (filters.assignedTo) {
@@ -139,7 +158,7 @@ function bindStatement(statement, bindings) {
   return bindings.length ? statement.bind(...bindings) : statement;
 }
 
-function normalizeReportRows(rows = []) {
+function normalizePrivateReportRows(rows = []) {
   return rows.map((row) => ({
     id: row.id,
     tracking_code: row.tracking_code,
@@ -151,6 +170,21 @@ function normalizeReportRows(rows = []) {
     status: row.status,
     anonymous: row.anonymous === 1,
     public_visible: row.public_visible === 1,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    closed_at: row.closed_at,
+  }));
+}
+
+function normalizeViewerReportRows(rows = []) {
+  return rows.map((row) => ({
+    id: row.id,
+    tracking_code: row.tracking_code,
+    category_name: row.category_name,
+    priority: row.priority,
+    status: row.status,
+    public_summary: row.public_summary,
+    public_location_label: row.public_location_label,
     created_at: row.created_at,
     updated_at: row.updated_at,
     closed_at: row.closed_at,
@@ -189,8 +223,13 @@ export async function onRequest({ request, env, data = {} }) {
     return jsonError("UNAUTHORIZED", "กรุณาเข้าสู่ระบบ", 401);
   }
 
+  if (!hasKnownReportRole(data.user)) {
+    return jsonError("FORBIDDEN", "This account cannot view reports", 403);
+  }
+
   const url = new URL(request.url);
-  const filters = buildFilters(url.searchParams, data.user);
+  const includePrivate = canViewPrivateReports(data.user);
+  const filters = buildFilters(url.searchParams, data.user, includePrivate);
   const where = buildWhereClause(filters);
 
   try {
@@ -203,25 +242,42 @@ export async function onRequest({ request, env, data = {} }) {
     const totalRow = await bindStatement(totalStatement, where.bindings).first();
 
     const reportsStatement = env.DB.prepare(
-      `SELECT
-        r.id,
-        r.tracking_code,
-        r.title,
-        r.category_id,
-        r.location_text,
-        r.priority,
-        r.status,
-        r.anonymous,
-        r.public_visible,
-        r.created_at,
-        r.updated_at,
-        r.closed_at,
-        c.name AS category_name
-      FROM reports r
-      JOIN categories c ON c.id = r.category_id
-      ${where.sql}
-      ORDER BY r.created_at DESC, r.id DESC
-      LIMIT ? OFFSET ?`
+      includePrivate
+        ? `SELECT
+          r.id,
+          r.tracking_code,
+          r.title,
+          r.category_id,
+          r.location_text,
+          r.priority,
+          r.status,
+          r.anonymous,
+          r.public_visible,
+          r.created_at,
+          r.updated_at,
+          r.closed_at,
+          c.name AS category_name
+        FROM reports r
+        JOIN categories c ON c.id = r.category_id
+        ${where.sql}
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT ? OFFSET ?`
+        : `SELECT
+          r.id,
+          r.tracking_code,
+          r.priority,
+          r.status,
+          r.public_summary,
+          r.public_location_label,
+          r.created_at,
+          r.updated_at,
+          r.closed_at,
+          c.name AS category_name
+        FROM reports r
+        JOIN categories c ON c.id = r.category_id
+        ${where.sql}
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT ? OFFSET ?`
     );
     const { results: reportRows } = await bindStatement(reportsStatement, [
       ...where.bindings,
@@ -260,7 +316,9 @@ export async function onRequest({ request, env, data = {} }) {
 
     return jsonOk(
       {
-        reports: normalizeReportRows(reportRows),
+        reports: includePrivate
+          ? normalizePrivateReportRows(reportRows)
+          : normalizeViewerReportRows(reportRows),
         pagination: {
           page: filters.page,
           limit: filters.limit,
