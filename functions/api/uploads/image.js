@@ -7,6 +7,37 @@ const ALLOWED_IMAGE_TYPES = new Map([
   ["image/png", new Set(["png"])],
   ["image/webp", new Set(["webp"])],
 ]);
+const MAX_SIGNATURE_BYTES = 12;
+const IMAGE_SIGNATURES = {
+  "image/jpeg": {
+    minBytes: 3,
+    matches(bytes) {
+      return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    },
+  },
+  "image/png": {
+    minBytes: 8,
+    matches(bytes) {
+      const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+      return signature.every((byte, index) => bytes[index] === byte);
+    },
+  },
+  "image/webp": {
+    minBytes: 12,
+    matches(bytes) {
+      return (
+        bytes[0] === 0x52 &&
+        bytes[1] === 0x49 &&
+        bytes[2] === 0x46 &&
+        bytes[3] === 0x46 &&
+        bytes[8] === 0x57 &&
+        bytes[9] === 0x45 &&
+        bytes[10] === 0x42 &&
+        bytes[11] === 0x50
+      );
+    },
+  },
+};
 
 function jsonResponse(body, status = 200, headers = {}) {
   return Response.json(body, {
@@ -78,11 +109,28 @@ function isUploadedFile(value) {
     typeof value.name === "string" &&
     typeof value.type === "string" &&
     typeof value.size === "number" &&
+    typeof value.slice === "function" &&
     typeof value.arrayBuffer === "function"
   );
 }
 
-function validateImageFile(file) {
+function invalidImageContentError() {
+  return {
+    code: "INVALID_IMAGE_CONTENT",
+    status: 415,
+    fields: {
+      file: "Invalid image file content",
+    },
+    message: "Image file content does not match the declared type",
+  };
+}
+
+async function readImageHeader(file) {
+  const header = await file.slice(0, MAX_SIGNATURE_BYTES).arrayBuffer();
+  return new Uint8Array(header);
+}
+
+async function validateImageFile(file) {
   if (!isUploadedFile(file)) {
     return {
       code: "VALIDATION_ERROR",
@@ -119,7 +167,7 @@ function validateImageFile(file) {
   const allowedExtensions = ALLOWED_IMAGE_TYPES.get(file.type);
   const extension = getExtension(file.name);
 
-  if (!allowedExtensions || (extension && !allowedExtensions.has(extension))) {
+  if (!allowedExtensions || !extension || !allowedExtensions.has(extension)) {
     return {
       code: "UNSUPPORTED_FILE_TYPE",
       status: 415,
@@ -130,7 +178,16 @@ function validateImageFile(file) {
     };
   }
 
-  return null;
+  const signature = IMAGE_SIGNATURES[file.type];
+  const headerBytes = await readImageHeader(file);
+
+  if (headerBytes.length < signature.minBytes || !signature.matches(headerBytes)) {
+    return invalidImageContentError();
+  }
+
+  return {
+    contentType: file.type,
+  };
 }
 
 function getYearFromTrackingCode(trackingCode) {
@@ -310,14 +367,14 @@ export async function onRequest({ request, env }) {
     );
   }
 
-  const fileError = validateImageFile(file);
+  const fileValidation = await validateImageFile(file);
 
-  if (fileError) {
+  if (fileValidation?.code) {
     return errorResponse(
-      fileError.code,
-      fileError.message,
-      fileError.status,
-      fileError.fields
+      fileValidation.code,
+      fileValidation.message,
+      fileValidation.status,
+      fileValidation.fields
     );
   }
 
@@ -353,7 +410,7 @@ export async function onRequest({ request, env }) {
 
     await env.BUCKET.put(r2Key, await file.arrayBuffer(), {
       httpMetadata: {
-        contentType: file.type,
+        contentType: fileValidation.contentType,
       },
       customMetadata: {
         report_id: String(reportId),
@@ -367,7 +424,7 @@ export async function onRequest({ request, env }) {
       reportId,
       r2Key,
       fileName: keyData.fileName,
-      fileType: file.type,
+      fileType: fileValidation.contentType,
       fileSize: file.size,
     });
 
