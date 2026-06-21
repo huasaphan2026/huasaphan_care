@@ -60,6 +60,18 @@ test("admin login rejects /admin/login return path", () => {
   assert.equal(context.getSafeReturnPath(), "/admin/dashboard.html");
 });
 
+test("admin login rejects /admin/login trailing slash return path", () => {
+  const context = loadLoginScript("?return=%2Fadmin%2Flogin%2F");
+
+  assert.equal(context.getSafeReturnPath(), "/admin/dashboard.html");
+});
+
+test("admin login rejects login return path with query string", () => {
+  const context = loadLoginScript("?return=%2Fadmin%2Flogin%3Freturn%3D%252Fadmin%252Freports.html");
+
+  assert.equal(context.getSafeReturnPath(), "/admin/dashboard.html");
+});
+
 test("admin login rejects login page return path", () => {
   const context = loadLoginScript("?return=%2Fadmin%2Flogin.html");
 

@@ -95,13 +95,18 @@ function getSafeReturnPath() {
     return fallbackPath;
   }
 
+  const normalizedPathname =
+    returnUrl.pathname !== "/" && returnUrl.pathname.endsWith("/")
+      ? returnUrl.pathname.slice(0, -1)
+      : returnUrl.pathname;
+
   if (
     returnUrl.origin !== window.location.origin ||
     returnUrl.username ||
     returnUrl.password ||
     !returnUrl.pathname.startsWith("/admin/") ||
-    returnUrl.pathname === "/admin/login" ||
-    returnUrl.pathname === "/admin/login.html"
+    normalizedPathname === "/admin/login" ||
+    normalizedPathname === "/admin/login.html"
   ) {
     return fallbackPath;
   }

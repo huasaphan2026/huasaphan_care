@@ -3,7 +3,9 @@ import { jsonError } from "./api/_utils/response.js";
 
 const ADMIN_API_PREFIX = "/api/admin/";
 const ADMIN_PAGE_PREFIX = "/admin/";
-const ADMIN_LOGIN_PATH = "/admin/login.html";
+const ADMIN_LOGIN_PATH = "/admin/login";
+const ADMIN_LOGIN_PATHS = new Set([ADMIN_LOGIN_PATH, "/admin/login.html"]);
+const ADMIN_FALLBACK_PATH = "/admin/dashboard.html";
 
 function getAllowedRoles(pathname, method) {
   const normalizedMethod = method.toUpperCase();
@@ -54,22 +56,33 @@ function isAdminPagePath(pathname) {
   return pathname === "/admin" || pathname.startsWith(ADMIN_PAGE_PREFIX);
 }
 
+function normalizePathname(pathname) {
+  if (pathname !== "/" && pathname.endsWith("/")) {
+    return pathname.slice(0, -1);
+  }
+
+  return pathname;
+}
+
 function isAdminLoginPath(pathname) {
-  return pathname === ADMIN_LOGIN_PATH;
+  return ADMIN_LOGIN_PATHS.has(normalizePathname(pathname));
 }
 
 function safeReturnPath(url) {
   const path = `${url.pathname}${url.search}`;
+  const returnUrl = new URL(path, url.origin);
 
   if (
     path.startsWith("/") &&
     !path.startsWith("//") &&
-    !path.startsWith(ADMIN_LOGIN_PATH)
+    !path.includes("\\") &&
+    returnUrl.origin === url.origin &&
+    !isAdminLoginPath(returnUrl.pathname)
   ) {
     return path;
   }
 
-  return "/admin/dashboard.html";
+  return ADMIN_FALLBACK_PATH;
 }
 
 function redirectToAdminLogin(url) {

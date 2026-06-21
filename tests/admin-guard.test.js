@@ -99,25 +99,58 @@ async function runMiddleware(url, options) {
   };
 }
 
-test("guest can access admin login page", async () => {
-  const { context, response } = await runMiddleware(
-    "https://example.test/admin/login.html"
-  );
+async function assertLoginPasses(path) {
+  const { context, response } = await runMiddleware(`https://example.test${path}`);
 
   assert.equal(context.nextCalled, true);
   assert.equal(response.status, 299);
+}
+
+function assertSingleLoginRedirect(response, expectedReturnPath) {
+  const location = response.headers.get("Location");
+  const locationUrl = new URL(location);
+  const returnPath = locationUrl.searchParams.get("return");
+
+  assert.equal(response.status, 303);
+  assert.equal(locationUrl.pathname, "/admin/login");
+  assert.equal(locationUrl.searchParams.getAll("return").length, 1);
+  assert.equal(returnPath, expectedReturnPath);
+  assert.equal(returnPath.includes("/admin/login"), false);
+}
+
+test("guest can access admin login pretty path", async () => {
+  await assertLoginPasses("/admin/login");
 });
 
-test("guest admin page request redirects to login", async () => {
+test("guest can access admin login trailing slash path", async () => {
+  await assertLoginPasses("/admin/login/");
+});
+
+test("guest can access admin login html path", async () => {
+  await assertLoginPasses("/admin/login.html");
+});
+
+test("guest can access admin login path with query string", async () => {
+  await assertLoginPasses("/admin/login?return=%2Fadmin%2Fdashboard");
+  await assertLoginPasses("/admin/login.html?return=%2Fadmin%2Fdashboard");
+});
+
+test("guest admin dashboard pretty path redirects once to canonical login", async () => {
+  const { context, response } = await runMiddleware(
+    "https://example.test/admin/dashboard"
+  );
+
+  assert.equal(context.nextCalled, false);
+  assertSingleLoginRedirect(response, "/admin/dashboard");
+});
+
+test("guest admin dashboard html path redirects once to canonical login", async () => {
   const { context, response } = await runMiddleware(
     "https://example.test/admin/dashboard.html"
   );
-  const location = response.headers.get("Location");
 
   assert.equal(context.nextCalled, false);
-  assert.equal(response.status, 303);
-  assert.ok(location.startsWith("https://example.test/admin/login.html?"));
-  assert.equal(new URL(location).searchParams.get("return"), "/admin/dashboard.html");
+  assertSingleLoginRedirect(response, "/admin/dashboard.html");
 });
 
 test("guest admin API request returns JSON 401", async () => {
@@ -144,7 +177,7 @@ test("invalid session redirects admin page to login", async () => {
   );
 
   assert.equal(response.status, 303);
-  assert.ok(response.headers.get("Location").includes("/admin/login.html"));
+  assert.equal(new URL(response.headers.get("Location")).pathname, "/admin/login");
 });
 
 test("valid session can access admin page", async () => {
