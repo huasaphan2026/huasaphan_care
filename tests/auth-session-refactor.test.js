@@ -75,25 +75,47 @@ function createAuthDbMock(user) {
   };
 }
 
-function createEnv(user, secret = SESSION_SECRET) {
+function createEnv(user, secret = SESSION_SECRET, db = createAuthDbMock(user)) {
   return {
     SESSION_SECRET: secret,
-    DB: createAuthDbMock(user),
+    DB: db,
   };
 }
 
-async function loginRequest(body, user) {
+async function loginRequest(body, user, env = createEnv(user)) {
   const response = await onLogin({
     request: new Request("https://example.test/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
-    env: createEnv(user),
+    env,
   });
   const payload = await response.json();
 
   return { response, payload };
+}
+
+async function captureConsole(callback) {
+  const originalLog = console.log;
+  const originalError = console.error;
+  const logs = [];
+  const errors = [];
+
+  console.log = (...args) => {
+    logs.push(args);
+  };
+  console.error = (...args) => {
+    errors.push(args);
+  };
+
+  try {
+    const result = await callback();
+    return { result, logs, errors };
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+  }
 }
 
 async function meRequest(cookieHeader, user, secret = SESSION_SECRET) {
@@ -258,6 +280,110 @@ test("login treats inactive user lookup miss as login failure", async () => {
 
   assert.equal(result.response.status, 401);
   assert.equal(result.payload.error.code, "LOGIN_FAILED");
+});
+
+test("login diagnostic logs only safe metadata for missing user", async () => {
+  const password = "missing-user-password";
+  const { result, logs, errors } = await captureConsole(() =>
+    loginRequest({ username: "missing", password }, null)
+  );
+  const logText = JSON.stringify(logs);
+
+  assert.equal(result.response.status, 401);
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0][0], "LOGIN_DIAG_USER");
+  assert.deepEqual(logs[0][1], {
+    userFound: false,
+    usernameLength: 7,
+    passwordLength: password.length,
+    role: null,
+    activeUserIdPresent: false,
+    hashType: "undefined",
+    hashLength: 0,
+  });
+  assert.equal(errors.length, 0);
+  assert.equal(logText.includes(password), false);
+});
+
+test("login diagnostic logs password result without password or stored hash", async () => {
+  const password = "correct-password";
+  const storedHash = await hashPassword(password);
+  const user = {
+    id: 1,
+    name: "Admin",
+    username: "admin",
+    role: "admin",
+    password_hash: storedHash,
+  };
+  const { result, logs, errors } = await captureConsole(() =>
+    loginRequest({ username: "admin", password: "wrong-password" }, user)
+  );
+  const logText = JSON.stringify(logs);
+
+  assert.equal(result.response.status, 401);
+  assert.equal(logs.length, 2);
+  assert.equal(logs[0][0], "LOGIN_DIAG_USER");
+  assert.equal(logs[0][1].userFound, true);
+  assert.equal(logs[0][1].role, "admin");
+  assert.equal(logs[0][1].hashType, "string");
+  assert.equal(logs[0][1].hashLength, storedHash.length);
+  assert.equal(logs[1][0], "LOGIN_DIAG_PASSWORD");
+  assert.deepEqual(logs[1][1], { passwordValid: false });
+  assert.equal(errors.length, 0);
+  assert.equal(logText.includes("wrong-password"), false);
+  assert.equal(logText.includes(password), false);
+  assert.equal(logText.includes(storedHash), false);
+});
+
+test("login exception logs safe error metadata and returns 500", async () => {
+  const db = {
+    prepare() {
+      throw new TypeError("D1 prepare failed");
+    },
+  };
+  const { result, logs, errors } = await captureConsole(() =>
+    loginRequest(
+      { username: "admin", password: "correct-password" },
+      null,
+      createEnv(null, SESSION_SECRET, db)
+    )
+  );
+  const errorText = JSON.stringify(errors);
+
+  assert.equal(result.response.status, 500);
+  assert.equal(result.payload.error.code, "SERVER_ERROR");
+  assert.equal(logs.length, 0);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0][0], "LOGIN_DIAG_ERROR");
+  assert.deepEqual(errors[0][1], {
+    name: "TypeError",
+    message: "D1 prepare failed",
+  });
+  assert.equal(errorText.includes("correct-password"), false);
+});
+
+test("super_admin can log in and receives existing session cookie shape", async () => {
+  const storedHash = await hashPassword("correct-password");
+  const user = {
+    id: 2,
+    name: "Super Admin",
+    username: "admin",
+    role: "super_admin",
+    password_hash: storedHash,
+  };
+  const { result } = await captureConsole(() =>
+    loginRequest({ username: "admin", password: "correct-password" }, user)
+  );
+  const cookie = result.response.headers.get("Set-Cookie");
+
+  assert.equal(result.response.status, 200);
+  assert.equal(result.payload.data.user.role, "super_admin");
+  assert.ok(cookie.includes(`${SESSION_COOKIE_NAME}=`));
+  assert.ok(cookie.includes("HttpOnly"));
+  assert.ok(cookie.includes("Secure"));
+  assert.ok(cookie.includes("SameSite=Lax"));
+  assert.ok(cookie.includes("Path=/"));
+  assert.ok(cookie.includes("Max-Age=604800"));
 });
 
 test("me returns current user shape when session is valid", async () => {
