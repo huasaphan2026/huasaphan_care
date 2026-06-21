@@ -137,6 +137,22 @@ main {
   box-shadow: var(--shadow-soft);
 }
 
+.home-hero {
+  width: 100%;
+  margin: 0 auto 20px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--color-bg);
+}
+
+.home-hero__image {
+  display: block;
+  width: 100%;
+  height: clamp(180px, 52vw, 240px);
+  object-fit: cover;
+  object-position: center;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: var(--color-primary-dark);
@@ -222,6 +238,10 @@ h2 {
 
   .hero-card {
     padding: 42px;
+  }
+
+  .home-hero__image {
+    height: clamp(260px, 34vw, 360px);
   }
 
   h1 {
