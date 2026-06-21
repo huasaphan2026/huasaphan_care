@@ -76,17 +76,22 @@ a {
   line-height: 1.25;
 }
 
-.brand-mark {
+.brand-logo {
   flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 0.78rem;
-  letter-spacing: 0;
+  display: block;
+  width: 44px;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  object-fit: contain;
+}
+
+.page-logo {
+  display: block;
+  width: clamp(80px, 22vw, 110px);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  margin: 0 auto 12px;
+  object-fit: contain;
 }
 
 .emergency-link {
