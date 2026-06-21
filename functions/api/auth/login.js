@@ -1,4 +1,9 @@
-import { createSignedSession, sessionCookie, verifyPassword } from "../_utils/auth.js";
+import {
+  createSignedSession,
+  diagnosePasswordVerification,
+  sessionCookie,
+  verifyPassword,
+} from "../_utils/auth.js";
 import { jsonError, jsonOk } from "../_utils/response.js";
 
 function methodNotAllowed() {
@@ -67,6 +72,13 @@ export async function onRequest({ request, env }) {
     });
 
     if (!passwordValid) {
+      const passwordDiagnostic = await diagnosePasswordVerification(
+        password,
+        user.password_hash
+      );
+
+      console.log("LOGIN_DIAG_PBKDF2", passwordDiagnostic);
+
       return jsonError("LOGIN_FAILED", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", 401);
     }
 

@@ -171,6 +171,90 @@ export async function verifyPassword(password, storedHash) {
   }
 }
 
+export async function diagnosePasswordVerification(password, storedHash) {
+  const result = {
+    passwordType: typeof password,
+    passwordLength: typeof password === "string" ? password.length : 0,
+    passwordUtf8Length:
+      typeof password === "string" ? textEncoder.encode(password).length : 0,
+    storedHashType: typeof storedHash,
+    storedHashLength: typeof storedHash === "string" ? storedHash.length : 0,
+    partsCount: 0,
+    algorithmMatches: false,
+    iterationsValid: false,
+    iterations: null,
+    saltTextLength: 0,
+    hashTextLength: 0,
+    saltBytesLength: 0,
+    storedHashBytesLength: 0,
+    candidateHashBytesLength: 0,
+    parseSucceeded: false,
+    deriveSucceeded: false,
+    equal: false,
+    firstMismatchIndex: null,
+    errorName: null,
+    errorMessage: null,
+  };
+
+  try {
+    const parts = String(storedHash || "").split("$");
+    result.partsCount = parts.length;
+
+    if (parts.length !== 4) {
+      return result;
+    }
+
+    const [algorithm, iterationsText, saltText, hashText] = parts;
+    const iterations = Number(iterationsText);
+
+    result.algorithmMatches = algorithm === PASSWORD_HASH_ALGORITHM;
+    result.iterations = Number.isFinite(iterations) ? iterations : null;
+    result.iterationsValid =
+      Number.isInteger(iterations) &&
+      iterations >= 100000 &&
+      iterations <= 1000000;
+    result.saltTextLength = saltText.length;
+    result.hashTextLength = hashText.length;
+
+    const parsed = parseStoredHash(storedHash);
+
+    if (!parsed) {
+      return result;
+    }
+
+    result.parseSucceeded = true;
+    result.saltBytesLength = parsed.salt.length;
+    result.storedHashBytesLength = parsed.hash.length;
+
+    const candidateHash = await derivePasswordHash(
+      password,
+      parsed.salt,
+      parsed.iterations
+    );
+
+    result.deriveSucceeded = true;
+    result.candidateHashBytesLength = candidateHash.length;
+    result.equal = constantTimeEqual(candidateHash, parsed.hash);
+
+    if (!result.equal) {
+      const maxLength = Math.max(candidateHash.length, parsed.hash.length);
+
+      for (let index = 0; index < maxLength; index += 1) {
+        if ((candidateHash[index] ?? -1) !== (parsed.hash[index] ?? -1)) {
+          result.firstMismatchIndex = index;
+          break;
+        }
+      }
+    }
+
+    return result;
+  } catch (error) {
+    result.errorName = error?.name || "UnknownError";
+    result.errorMessage = error?.message || "Unknown error";
+    return result;
+  }
+}
+
 export function createSessionToken() {
   return bytesToBase64Url(randomBytes(SESSION_TOKEN_BYTES));
 }

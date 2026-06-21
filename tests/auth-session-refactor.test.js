@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   clearSessionCookie,
   createSignedSession,
+  diagnosePasswordVerification,
   hashPassword,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
@@ -118,6 +119,28 @@ async function captureConsole(callback) {
   }
 }
 
+function assertNoSensitivePasswordDiagnosticData(diagnostic, secrets = []) {
+  const forbiddenKeys = [
+    "password",
+    "storedHash",
+    "salt",
+    "saltText",
+    "hashText",
+    "candidateHash",
+    "storedHashBytes",
+    "hash",
+  ];
+  const text = JSON.stringify(diagnostic);
+
+  forbiddenKeys.forEach((key) => {
+    assert.equal(Object.hasOwn(diagnostic, key), false, `diagnostic exposed ${key}`);
+  });
+
+  secrets.filter(Boolean).forEach((secret) => {
+    assert.equal(text.includes(secret), false, "diagnostic exposed secret value");
+  });
+}
+
 async function meRequest(cookieHeader, user, secret = SESSION_SECRET) {
   const response = await onMe({
     request: new Request("https://example.test/api/auth/me", {
@@ -182,6 +205,74 @@ test("session helper rejects malformed token", async () => {
   assert.equal(await verifySessionToken("not-a-session-token", createEnv(null)), null);
   assert.equal(await verifySessionToken("a.b.c", createEnv(null)), null);
   assert.equal(await verifySessionToken("", createEnv(null)), null);
+});
+
+test("password diagnostic reports equal true for a valid password", async () => {
+  const password = "correct-password";
+  const storedHash = await hashPassword(password);
+  const diagnostic = await diagnosePasswordVerification(password, storedHash);
+
+  assert.equal(diagnostic.passwordType, "string");
+  assert.equal(diagnostic.passwordLength, password.length);
+  assert.equal(diagnostic.storedHashType, "string");
+  assert.equal(diagnostic.storedHashLength, storedHash.length);
+  assert.equal(diagnostic.partsCount, 4);
+  assert.equal(diagnostic.algorithmMatches, true);
+  assert.equal(diagnostic.iterationsValid, true);
+  assert.equal(diagnostic.parseSucceeded, true);
+  assert.equal(diagnostic.deriveSucceeded, true);
+  assert.equal(diagnostic.equal, true);
+  assert.equal(diagnostic.firstMismatchIndex, null);
+  assertNoSensitivePasswordDiagnosticData(diagnostic, [password, storedHash]);
+});
+
+test("password diagnostic reports mismatch details for a wrong password", async () => {
+  const password = "correct-password";
+  const storedHash = await hashPassword(password);
+  const diagnostic = await diagnosePasswordVerification("wrong-password", storedHash);
+
+  assert.equal(diagnostic.parseSucceeded, true);
+  assert.equal(diagnostic.deriveSucceeded, true);
+  assert.equal(diagnostic.equal, false);
+  assert.equal(Number.isInteger(diagnostic.firstMismatchIndex), true);
+  assert.equal(diagnostic.candidateHashBytesLength, diagnostic.storedHashBytesLength);
+  assertNoSensitivePasswordDiagnosticData(diagnostic, [
+    password,
+    "wrong-password",
+    storedHash,
+  ]);
+});
+
+test("password diagnostic reports parse failure for malformed stored hash", async () => {
+  const diagnostic = await diagnosePasswordVerification(
+    "correct-password",
+    "not-a-valid-hash"
+  );
+
+  assert.equal(diagnostic.partsCount, 1);
+  assert.equal(diagnostic.parseSucceeded, false);
+  assert.equal(diagnostic.deriveSucceeded, false);
+  assert.equal(diagnostic.equal, false);
+  assertNoSensitivePasswordDiagnosticData(diagnostic, [
+    "correct-password",
+    "not-a-valid-hash",
+  ]);
+});
+
+test("password diagnostic records safe error metadata for invalid base64", async () => {
+  const storedHash = "pbkdf2-sha256$210000$****$!!!!";
+  const diagnostic = await diagnosePasswordVerification("correct-password", storedHash);
+
+  assert.equal(diagnostic.partsCount, 4);
+  assert.equal(diagnostic.algorithmMatches, true);
+  assert.equal(diagnostic.iterationsValid, true);
+  assert.equal(diagnostic.parseSucceeded, false);
+  assert.equal(typeof diagnostic.errorName, "string");
+  assert.equal(typeof diagnostic.errorMessage, "string");
+  assertNoSensitivePasswordDiagnosticData(diagnostic, [
+    "correct-password",
+    storedHash,
+  ]);
 });
 
 test("session cookie preserves existing login attributes", async () => {
@@ -321,7 +412,7 @@ test("login diagnostic logs password result without password or stored hash", as
   const logText = JSON.stringify(logs);
 
   assert.equal(result.response.status, 401);
-  assert.equal(logs.length, 2);
+  assert.equal(logs.length, 3);
   assert.equal(logs[0][0], "LOGIN_DIAG_USER");
   assert.equal(logs[0][1].userFound, true);
   assert.equal(logs[0][1].role, "admin");
@@ -329,6 +420,16 @@ test("login diagnostic logs password result without password or stored hash", as
   assert.equal(logs[0][1].hashLength, storedHash.length);
   assert.equal(logs[1][0], "LOGIN_DIAG_PASSWORD");
   assert.deepEqual(logs[1][1], { passwordValid: false });
+  assert.equal(logs[2][0], "LOGIN_DIAG_PBKDF2");
+  assert.equal(logs[2][1].parseSucceeded, true);
+  assert.equal(logs[2][1].deriveSucceeded, true);
+  assert.equal(logs[2][1].equal, false);
+  assert.equal(Number.isInteger(logs[2][1].firstMismatchIndex), true);
+  assertNoSensitivePasswordDiagnosticData(logs[2][1], [
+    "wrong-password",
+    password,
+    storedHash,
+  ]);
   assert.equal(errors.length, 0);
   assert.equal(logText.includes("wrong-password"), false);
   assert.equal(logText.includes(password), false);
