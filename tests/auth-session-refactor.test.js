@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
   clearSessionCookie,
   createSignedSession,
-  diagnosePasswordVerification,
   hashPassword,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
   sessionCookie,
+  verifyPassword,
   verifySessionToken,
 } from "../functions/api/_utils/auth.js";
 import { onRequest as onLogin } from "../functions/api/auth/login.js";
@@ -97,50 +98,6 @@ async function loginRequest(body, user, env = createEnv(user)) {
   return { response, payload };
 }
 
-async function captureConsole(callback) {
-  const originalLog = console.log;
-  const originalError = console.error;
-  const logs = [];
-  const errors = [];
-
-  console.log = (...args) => {
-    logs.push(args);
-  };
-  console.error = (...args) => {
-    errors.push(args);
-  };
-
-  try {
-    const result = await callback();
-    return { result, logs, errors };
-  } finally {
-    console.log = originalLog;
-    console.error = originalError;
-  }
-}
-
-function assertNoSensitivePasswordDiagnosticData(diagnostic, secrets = []) {
-  const forbiddenKeys = [
-    "password",
-    "storedHash",
-    "salt",
-    "saltText",
-    "hashText",
-    "candidateHash",
-    "storedHashBytes",
-    "hash",
-  ];
-  const text = JSON.stringify(diagnostic);
-
-  forbiddenKeys.forEach((key) => {
-    assert.equal(Object.hasOwn(diagnostic, key), false, `diagnostic exposed ${key}`);
-  });
-
-  secrets.filter(Boolean).forEach((secret) => {
-    assert.equal(text.includes(secret), false, "diagnostic exposed secret value");
-  });
-}
-
 async function meRequest(cookieHeader, user, secret = SESSION_SECRET) {
   const response = await onMe({
     request: new Request("https://example.test/api/auth/me", {
@@ -207,72 +164,44 @@ test("session helper rejects malformed token", async () => {
   assert.equal(await verifySessionToken("", createEnv(null)), null);
 });
 
-test("password diagnostic reports equal true for a valid password", async () => {
-  const password = "correct-password";
-  const storedHash = await hashPassword(password);
-  const diagnostic = await diagnosePasswordVerification(password, storedHash);
+test("hashPassword creates PBKDF2-SHA256 hash with 100000 iterations", async () => {
+  const storedHash = await hashPassword("correct-password");
+  const parts = storedHash.split("$");
 
-  assert.equal(diagnostic.passwordType, "string");
-  assert.equal(diagnostic.passwordLength, password.length);
-  assert.equal(diagnostic.storedHashType, "string");
-  assert.equal(diagnostic.storedHashLength, storedHash.length);
-  assert.equal(diagnostic.partsCount, 4);
-  assert.equal(diagnostic.algorithmMatches, true);
-  assert.equal(diagnostic.iterationsValid, true);
-  assert.equal(diagnostic.parseSucceeded, true);
-  assert.equal(diagnostic.deriveSucceeded, true);
-  assert.equal(diagnostic.equal, true);
-  assert.equal(diagnostic.firstMismatchIndex, null);
-  assertNoSensitivePasswordDiagnosticData(diagnostic, [password, storedHash]);
+  assert.equal(parts.length, 4);
+  assert.equal(parts[0], "pbkdf2-sha256");
+  assert.equal(parts[1], "100000");
 });
 
-test("password diagnostic reports mismatch details for a wrong password", async () => {
-  const password = "correct-password";
-  const storedHash = await hashPassword(password);
-  const diagnostic = await diagnosePasswordVerification("wrong-password", storedHash);
+test("verifyPassword accepts a valid 100000 iteration hash", async () => {
+  const storedHash = await hashPassword("correct-password");
 
-  assert.equal(diagnostic.parseSucceeded, true);
-  assert.equal(diagnostic.deriveSucceeded, true);
-  assert.equal(diagnostic.equal, false);
-  assert.equal(Number.isInteger(diagnostic.firstMismatchIndex), true);
-  assert.equal(diagnostic.candidateHashBytesLength, diagnostic.storedHashBytesLength);
-  assertNoSensitivePasswordDiagnosticData(diagnostic, [
-    password,
-    "wrong-password",
-    storedHash,
-  ]);
+  assert.equal(await verifyPassword("correct-password", storedHash), true);
 });
 
-test("password diagnostic reports parse failure for malformed stored hash", async () => {
-  const diagnostic = await diagnosePasswordVerification(
-    "correct-password",
-    "not-a-valid-hash"
+test("verifyPassword returns false for a wrong password", async () => {
+  const storedHash = await hashPassword("correct-password");
+
+  assert.equal(await verifyPassword("wrong-password", storedHash), false);
+});
+
+test("verifyPassword returns false for malformed stored hashes", async () => {
+  assert.equal(await verifyPassword("correct-password", "not-a-valid-hash"), false);
+  assert.equal(
+    await verifyPassword("correct-password", "pbkdf2-sha256$99999$abc$def"),
+    false
   );
-
-  assert.equal(diagnostic.partsCount, 1);
-  assert.equal(diagnostic.parseSucceeded, false);
-  assert.equal(diagnostic.deriveSucceeded, false);
-  assert.equal(diagnostic.equal, false);
-  assertNoSensitivePasswordDiagnosticData(diagnostic, [
-    "correct-password",
-    "not-a-valid-hash",
-  ]);
 });
 
-test("password diagnostic records safe error metadata for invalid base64", async () => {
-  const storedHash = "pbkdf2-sha256$210000$****$!!!!";
-  const diagnostic = await diagnosePasswordVerification("correct-password", storedHash);
+test("temporary login diagnostics are removed from source", () => {
+  const authSource = readFileSync("functions/api/_utils/auth.js", "utf8");
+  const loginSource = readFileSync("functions/api/auth/login.js", "utf8");
+  const combinedSource = `${authSource}\n${loginSource}`;
 
-  assert.equal(diagnostic.partsCount, 4);
-  assert.equal(diagnostic.algorithmMatches, true);
-  assert.equal(diagnostic.iterationsValid, true);
-  assert.equal(diagnostic.parseSucceeded, false);
-  assert.equal(typeof diagnostic.errorName, "string");
-  assert.equal(typeof diagnostic.errorMessage, "string");
-  assertNoSensitivePasswordDiagnosticData(diagnostic, [
-    "correct-password",
-    storedHash,
-  ]);
+  assert.equal(combinedSource.includes("LOGIN_DIAG"), false);
+  assert.equal(combinedSource.includes("diagnosePasswordVerification"), false);
+  assert.equal(loginSource.includes("console.log("), false);
+  assert.equal(loginSource.includes("console.error("), false);
 });
 
 test("session cookie preserves existing login attributes", async () => {
@@ -373,94 +302,20 @@ test("login treats inactive user lookup miss as login failure", async () => {
   assert.equal(result.payload.error.code, "LOGIN_FAILED");
 });
 
-test("login diagnostic logs only safe metadata for missing user", async () => {
-  const password = "missing-user-password";
-  const { result, logs, errors } = await captureConsole(() =>
-    loginRequest({ username: "missing", password }, null)
-  );
-  const logText = JSON.stringify(logs);
-
-  assert.equal(result.response.status, 401);
-  assert.equal(logs.length, 1);
-  assert.equal(logs[0][0], "LOGIN_DIAG_USER");
-  assert.deepEqual(logs[0][1], {
-    userFound: false,
-    usernameLength: 7,
-    passwordLength: password.length,
-    role: null,
-    activeUserIdPresent: false,
-    hashType: "undefined",
-    hashLength: 0,
-  });
-  assert.equal(errors.length, 0);
-  assert.equal(logText.includes(password), false);
-});
-
-test("login diagnostic logs password result without password or stored hash", async () => {
-  const password = "correct-password";
-  const storedHash = await hashPassword(password);
-  const user = {
-    id: 1,
-    name: "Admin",
-    username: "admin",
-    role: "admin",
-    password_hash: storedHash,
-  };
-  const { result, logs, errors } = await captureConsole(() =>
-    loginRequest({ username: "admin", password: "wrong-password" }, user)
-  );
-  const logText = JSON.stringify(logs);
-
-  assert.equal(result.response.status, 401);
-  assert.equal(logs.length, 3);
-  assert.equal(logs[0][0], "LOGIN_DIAG_USER");
-  assert.equal(logs[0][1].userFound, true);
-  assert.equal(logs[0][1].role, "admin");
-  assert.equal(logs[0][1].hashType, "string");
-  assert.equal(logs[0][1].hashLength, storedHash.length);
-  assert.equal(logs[1][0], "LOGIN_DIAG_PASSWORD");
-  assert.deepEqual(logs[1][1], { passwordValid: false });
-  assert.equal(logs[2][0], "LOGIN_DIAG_PBKDF2");
-  assert.equal(logs[2][1].parseSucceeded, true);
-  assert.equal(logs[2][1].deriveSucceeded, true);
-  assert.equal(logs[2][1].equal, false);
-  assert.equal(Number.isInteger(logs[2][1].firstMismatchIndex), true);
-  assertNoSensitivePasswordDiagnosticData(logs[2][1], [
-    "wrong-password",
-    password,
-    storedHash,
-  ]);
-  assert.equal(errors.length, 0);
-  assert.equal(logText.includes("wrong-password"), false);
-  assert.equal(logText.includes(password), false);
-  assert.equal(logText.includes(storedHash), false);
-});
-
-test("login exception logs safe error metadata and returns 500", async () => {
+test("login exception returns 500 with current response shape", async () => {
   const db = {
     prepare() {
       throw new TypeError("D1 prepare failed");
     },
   };
-  const { result, logs, errors } = await captureConsole(() =>
-    loginRequest(
-      { username: "admin", password: "correct-password" },
-      null,
-      createEnv(null, SESSION_SECRET, db)
-    )
+  const result = await loginRequest(
+    { username: "admin", password: "correct-password" },
+    null,
+    createEnv(null, SESSION_SECRET, db)
   );
-  const errorText = JSON.stringify(errors);
 
   assert.equal(result.response.status, 500);
   assert.equal(result.payload.error.code, "SERVER_ERROR");
-  assert.equal(logs.length, 0);
-  assert.equal(errors.length, 1);
-  assert.equal(errors[0][0], "LOGIN_DIAG_ERROR");
-  assert.deepEqual(errors[0][1], {
-    name: "TypeError",
-    message: "D1 prepare failed",
-  });
-  assert.equal(errorText.includes("correct-password"), false);
 });
 
 test("super_admin can log in and receives existing session cookie shape", async () => {
@@ -472,8 +327,9 @@ test("super_admin can log in and receives existing session cookie shape", async 
     role: "super_admin",
     password_hash: storedHash,
   };
-  const { result } = await captureConsole(() =>
-    loginRequest({ username: "admin", password: "correct-password" }, user)
+  const result = await loginRequest(
+    { username: "admin", password: "correct-password" },
+    user
   );
   const cookie = result.response.headers.get("Set-Cookie");
 

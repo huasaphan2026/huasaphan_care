@@ -1,9 +1,4 @@
-import {
-  createSignedSession,
-  diagnosePasswordVerification,
-  sessionCookie,
-  verifyPassword,
-} from "../_utils/auth.js";
+import { createSignedSession, sessionCookie, verifyPassword } from "../_utils/auth.js";
 import { jsonError, jsonOk } from "../_utils/response.js";
 
 function methodNotAllowed() {
@@ -48,37 +43,13 @@ export async function onRequest({ request, env }) {
       .bind(username, 1)
       .first();
 
-    console.log("LOGIN_DIAG_USER", {
-      userFound: Boolean(user),
-      usernameLength: username.length,
-      passwordLength: password.length,
-      role: user?.role || null,
-      activeUserIdPresent: Number.isInteger(Number(user?.id)),
-      hashType: typeof user?.password_hash,
-      hashLength:
-        typeof user?.password_hash === "string"
-          ? user.password_hash.length
-          : 0,
-    });
-
     if (!user) {
       return jsonError("LOGIN_FAILED", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", 401);
     }
 
     const passwordValid = await verifyPassword(password, user.password_hash);
 
-    console.log("LOGIN_DIAG_PASSWORD", {
-      passwordValid,
-    });
-
     if (!passwordValid) {
-      const passwordDiagnostic = await diagnosePasswordVerification(
-        password,
-        user.password_hash
-      );
-
-      console.log("LOGIN_DIAG_PBKDF2", passwordDiagnostic);
-
       return jsonError("LOGIN_FAILED", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", 401);
     }
 
@@ -96,12 +67,7 @@ export async function onRequest({ request, env }) {
 
     response.headers.set("Set-Cookie", sessionCookie(token));
     return response;
-  } catch (error) {
-    console.error("LOGIN_DIAG_ERROR", {
-      name: error?.name || "UnknownError",
-      message: error?.message || "Unknown error",
-    });
-
+  } catch {
     return jsonError("SERVER_ERROR", "ไม่สามารถเข้าสู่ระบบได้ในขณะนี้", 500);
   }
 }
