@@ -543,6 +543,7 @@ reports/2026/HSC-2026-0001/compressed/before-01.webp
 - role ต้องตรวจทุก endpoint ที่สำคัญ
 - `viewer` ห้ามแก้ข้อมูล
 - `staff` เห็นเฉพาะงานที่ได้รับมอบหมาย หรือเท่าที่กำหนด
+- Dashboard ต้องแยก scope ตาม role: admin เห็นทั้งระบบ, staff เห็นเฉพาะ `reports.assigned_to = session user.id`, viewer เห็นเฉพาะ aggregate สาธารณะและไม่เห็น latest reports รายชิ้น
 - `super_admin` เท่านั้นที่จัดการผู้ใช้ระดับสูงได้
 
 ### Public Privacy

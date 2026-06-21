@@ -20,9 +20,38 @@
     low: "ทั่วไป"
   };
 
+  var SCOPE_TEXT = {
+    all: {
+      label: "ภาพรวมทั้งระบบ",
+      copy: "ติดตามจำนวนเรื่องและรายการล่าสุดของระบบรับเรื่องชุมชนหัวสะพาน",
+      latestLabel: "รวมทั้งหมด",
+      latestCopy: "แสดงเฉพาะข้อมูลที่จำเป็นสำหรับเจ้าหน้าที่ ไม่มีเบอร์โทรหรือข้อมูลส่วนตัวของผู้แจ้ง",
+      empty: "ยังไม่มีรายการแจ้งเรื่องในระบบ"
+    },
+    assigned: {
+      label: "ภาพรวมงานที่ได้รับมอบหมาย",
+      copy: "ติดตามจำนวนเรื่องและรายการล่าสุดเฉพาะงานที่มอบหมายให้คุณ",
+      latestLabel: "งานที่ได้รับมอบหมาย",
+      latestCopy: "แสดงเฉพาะรายการล่าสุดของงานที่มอบหมายให้คุณ",
+      empty: "ยังไม่มีงานที่มอบหมายให้คุณ"
+    },
+    public: {
+      label: "ภาพรวมรายงานสาธารณะ",
+      copy: "แสดงเฉพาะสถิติสรุปที่เผยแพร่ได้และไม่มีข้อมูลส่วนบุคคล",
+      latestLabel: "รายงานสาธารณะ",
+      latestCopy: "รายการรายชิ้นถูกซ่อนไว้เพื่อป้องกันข้อมูลส่วนบุคคล",
+      empty: "ไม่มีรายการรายชิ้นที่เปิดให้ดูในแดชบอร์ดนี้"
+    }
+  };
+
   var statusBox = document.getElementById("dashboard-status");
+  var latestSection = document.getElementById("latest-section");
   var latestList = document.getElementById("latest-reports");
   var latestEmpty = document.getElementById("latest-empty");
+  var dashboardScopeLabel = document.getElementById("dashboard-scope-label");
+  var dashboardScopeCopy = document.getElementById("dashboard-scope-copy");
+  var latestScopeLabel = document.getElementById("latest-scope-label");
+  var latestScopeCopy = document.getElementById("latest-scope-copy");
   var logoutButton = document.getElementById("logout-button");
 
   function redirectToLogin() {
@@ -100,6 +129,53 @@
     }
   }
 
+  function renderScope(permissions, totalReports) {
+    var scope = permissions && permissions.scope ? permissions.scope : "all";
+    var text = SCOPE_TEXT[scope] || SCOPE_TEXT.all;
+
+    if (dashboardScopeLabel) {
+      dashboardScopeLabel.textContent = text.label;
+    }
+
+    if (dashboardScopeCopy) {
+      dashboardScopeCopy.textContent = text.copy;
+    }
+
+    if (latestScopeLabel) {
+      latestScopeLabel.textContent = text.latestLabel + " " + formatNumber(totalReports) + " เรื่อง";
+    }
+
+    if (latestScopeCopy) {
+      latestScopeCopy.textContent = text.latestCopy;
+    }
+
+    if (latestEmpty) {
+      latestEmpty.textContent = text.empty;
+    }
+
+    if (latestSection) {
+      latestSection.hidden = permissions && permissions.can_view_latest_reports === false;
+    }
+  }
+
+  function resetDashboard() {
+    renderSummary({
+      total_reports: 0,
+      new_reports: 0,
+      urgent_reports: 0,
+      in_progress_reports: 0,
+      resolved_reports: 0
+    });
+
+    if (latestList) {
+      latestList.textContent = "";
+    }
+
+    if (latestEmpty) {
+      latestEmpty.hidden = false;
+    }
+  }
+
   function createChip(text, status) {
     var chip = document.createElement("span");
     chip.className = "status-chip";
@@ -118,12 +194,17 @@
     parent.appendChild(paragraph);
   }
 
-  function renderLatest(reports) {
+  function renderLatest(reports, permissions) {
     if (!latestList || !latestEmpty) {
       return;
     }
 
     latestList.textContent = "";
+
+    if (permissions && permissions.can_view_latest_reports === false) {
+      latestEmpty.hidden = false;
+      return;
+    }
 
     if (!Array.isArray(reports) || reports.length === 0) {
       latestEmpty.hidden = false;
@@ -168,6 +249,10 @@
       return null;
     }
 
+    if (response.status === 403) {
+      throw new Error("DASHBOARD_FORBIDDEN");
+    }
+
     if (!response.ok) {
       throw new Error("DASHBOARD_REQUEST_FAILED");
     }
@@ -210,11 +295,18 @@
         return;
       }
 
+      renderScope(data.permissions, data.total_reports);
       renderSummary(data);
-      renderLatest(data.latest_reports);
+      renderLatest(data.latest_reports, data.permissions);
       setStatus("", "");
     } catch (error) {
-      setStatus("โหลดข้อมูลแดชบอร์ดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error");
+      resetDashboard();
+      setStatus(
+        error && error.message === "DASHBOARD_FORBIDDEN"
+          ? "บัญชีนี้ไม่มีสิทธิ์ดูแดชบอร์ด"
+          : "โหลดข้อมูลแดชบอร์ดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        "error"
+      );
     }
   }
 
